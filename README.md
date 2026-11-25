@@ -1,0 +1,2 @@
+# internschat
+Chat dos estagiários
