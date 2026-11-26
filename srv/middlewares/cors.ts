@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 
 const LOCALHOST_ORIGIN_PATTERN = /^http:\/\/localhost(:\d+)?$/;
 
-const PUBLIC_ORIGINS = ['https://internschat.github.io'];
+const PUBLIC_ORIGINS = ['https://resenhachat.github.io'];
 
 function isAllowedOrigin(origin: string): boolean {
     const configuredOrigins = (process.env.CORS_ORIGINS || '').split(',').map((value) => value.trim());

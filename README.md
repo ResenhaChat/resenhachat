@@ -1,4 +1,4 @@
-# internschat
+# resenhachat
 
 Backend do **Resenha**, o chat em tempo real dos estagiários (SAP CAP, Node + TypeScript, cds 9).
 
@@ -20,7 +20,7 @@ Dev usa SQLite em memória com os dados de `test/data`. Produção usa HANA.
   `cf set-env Resenha-srv JWT_SECRET <segredo-longo-e-aleatorio>` e depois `cf restage Resenha-srv`.
   Sem ele (ou com valor curto ou com placeholder `${...}`) o servidor não sobe.
 - Em dev, sem `JWT_SECRET`, usa-se um segredo fixo de desenvolvimento, com aviso no log. Para testar com um segredo próprio, copie `.env.example` para `.env`.
-- `CORS_ORIGINS` (opcional) lista origens extras separadas por vírgula. Além dela, são aceitos `http://localhost:*` e `https://internschat.github.io`.
+- `CORS_ORIGINS` (opcional) lista origens extras separadas por vírgula. Além dela, são aceitos `http://localhost:*` e `https://resenhachat.github.io`.
 - Atrás do proxy do Cloud Foundry o IP do cliente vem de `req.ip` (`trust proxy` = 1), usado no limite de tentativas de login.
 
 ### Notificações push (Web Push)
