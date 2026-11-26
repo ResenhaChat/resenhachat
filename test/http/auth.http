@@ -1,0 +1,41 @@
+@host = http://localhost:4004
+
+### Cadastro (entra automaticamente no Geral)
+POST {{host}}/auth/register
+Content-Type: application/json
+
+{
+    "Email": "maria@resenha.dev",
+    "Password": "123456",
+    "DisplayName": "Maria Alves",
+    "Username": "maria"
+}
+
+### Login (Login = e-mail ou usuario)
+# @name login
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+    "Login": "davi@resenha.dev",
+    "Password": "123456"
+}
+
+###
+@refreshToken = {{login.response.body.RefreshToken}}
+
+### Renovar sessao (rotaciona o refresh token)
+POST {{host}}/auth/refresh
+Content-Type: application/json
+
+{
+    "RefreshToken": "{{refreshToken}}"
+}
+
+### Sair (revoga o refresh token)
+POST {{host}}/auth/logout
+Content-Type: application/json
+
+{
+    "RefreshToken": "{{refreshToken}}"
+}

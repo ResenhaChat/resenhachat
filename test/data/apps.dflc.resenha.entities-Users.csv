@@ -1,0 +1,4 @@
+ID;Email;PasswordHash;DisplayName;Username;About;createdAt;createdBy
+a0000000-0000-4000-8000-000000000001;davi@resenha.dev;$2b$10$d.PoW1iNee9EN7EA4SDdCu3i3WX9gBavkhpZ5VoHc8IPyWCwdzx2m;Davi Castro;davi;Dono da resenha;2026-11-20T12:00:00.000Z;system
+a0000000-0000-4000-8000-000000000002;ana@resenha.dev;$2b$10$d.PoW1iNee9EN7EA4SDdCu3i3WX9gBavkhpZ5VoHc8IPyWCwdzx2m;Ana Souza;ana;Cafe e codigo;2026-11-20T12:05:00.000Z;system
+a0000000-0000-4000-8000-000000000003;joao@resenha.dev;$2b$10$d.PoW1iNee9EN7EA4SDdCu3i3WX9gBavkhpZ5VoHc8IPyWCwdzx2m;João Lima;joao;;2026-11-20T12:10:00.000Z;system

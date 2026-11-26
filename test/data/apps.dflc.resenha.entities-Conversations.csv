@@ -1,0 +1,3 @@
+ID;Kind;Name;Description;IsPublic;OnlyAdminsCanPost;LastMessageAt;LastMessage;createdAt;createdBy
+00000000-0000-4000-8000-000000000001;General;Geral;Todo mundo da resenha;true;false;2026-11-25T09:05:00.000Z;Alguém viu o café?;2026-11-20T12:00:00.000Z;system
+00000000-0000-4000-8000-000000000002;Group;Projeto X;Grupo de teste so com davi e ana;false;false;2026-11-25T10:01:00.000Z;Segredo do projeto, joao nao ve;2026-11-24T12:00:00.000Z;system

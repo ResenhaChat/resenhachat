@@ -1,0 +1,30 @@
+{
+    "[development]": {
+        "requires": {
+            "db": {
+                "kind": "sqlite",
+                "credentials": {
+                    "database": ":memory:"
+                }
+            }
+        }
+    },
+    "[production]": {
+        "requires": {
+            "db": {
+                "kind": "hana"
+            }
+        },
+        "hana": {
+            "deploy-format": "hdbtable"
+        }
+    },
+    "requires": {
+        "auth": {
+            "impl": "srv/auth/jwt-auth"
+        }
+    },
+    "server": {
+        "cors": false
+    }
+}

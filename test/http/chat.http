@@ -1,0 +1,74 @@
+@host = http://localhost:4004
+@chat = {{host}}/service/Chat
+@geral = 00000000-0000-4000-8000-000000000001
+
+### Login
+# @name login
+POST {{host}}/auth/login
+Content-Type: application/json
+
+{
+    "Login": "davi",
+    "Password": "123456"
+}
+
+###
+@token = {{login.response.body.AccessToken}}
+
+### Conversas com nao lidas
+GET {{chat}}/Conversations?$orderby=LastMessageAt desc
+Authorization: Bearer {{token}}
+
+### Mensagens do Geral com remetente
+GET {{chat}}/Messages?$filter=Conversation_ID eq {{geral}}&$orderby=createdAt desc&$top=30&$expand=Sender
+Authorization: Bearer {{token}}
+
+### Pessoas (com IsOnline)
+GET {{chat}}/People
+Authorization: Bearer {{token}}
+
+### Membros do Geral
+GET {{chat}}/Members?$filter=Conversation_ID eq {{geral}}&$expand=User
+Authorization: Bearer {{token}}
+
+### Enviar mensagem
+POST {{chat}}/SendMessage
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "Conversation_ID": "{{geral}}",
+    "Text": "Ola, resenha!"
+}
+
+### Marcar como lida
+POST {{chat}}/MarkAsRead
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "Conversation_ID": "{{geral}}"
+}
+
+### Meu perfil
+GET {{chat}}/Me?$expand=Settings
+Authorization: Bearer {{token}}
+
+### Editar perfil
+PATCH {{chat}}/Me(a0000000-0000-4000-8000-000000000001)
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "DisplayName": "Davi Castro",
+    "About": "Trabalhando"
+}
+
+### Minhas configuracoes
+PATCH {{chat}}/MySettings(User_ID=a0000000-0000-4000-8000-000000000001)
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "Theme": "Dark"
+}
