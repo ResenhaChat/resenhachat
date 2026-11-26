@@ -44,6 +44,10 @@ export class MessageModel extends BaseModel {
 
     public get SenderId() { return this.properties.SenderId; }
 
+    public get Kind() { return this.properties.Kind; }
+
+    public get IsViewOnce() { return this.properties.IsViewOnce; }
+
     public get Text() { return this.properties.Text; }
 
     public get CreatedAt() { return this.properties.CreatedAt; }

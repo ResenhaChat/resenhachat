@@ -9,6 +9,7 @@ import { ConversationMemberRepository } from '@/repositories/conversation-member
 import { ConversationRepository } from '@/repositories/conversation';
 import { MessageRepository } from '@/repositories/message';
 import { RealtimeHub } from '@/realtime/hub';
+import { PushService } from '@/services/push';
 import { MessageService, SendMessageInput } from './protocols';
 import { BaseServiceImplementation } from '../base/implementation';
 
@@ -18,7 +19,8 @@ export class MessageServiceImplementation extends BaseServiceImplementation<Mess
         private readonly Repository: MessageRepository,
         private readonly Conversations: ConversationRepository,
         private readonly Members: ConversationMemberRepository,
-        private readonly Hub: RealtimeHub
+        private readonly Hub: RealtimeHub,
+        private readonly Push: PushService
     ) {
 
         super();
@@ -149,10 +151,15 @@ export class MessageServiceImplementation extends BaseServiceImplementation<Mess
 
         const aUserIds = await this.Members.findUserIds(Message.ConversationId);
 
-        Request.on('succeeded', () => this.Hub.publish(aUserIds, {
-            type: 'message.created',
-            payload: { ConversationId: Message.ConversationId, MessageId: Message.Id, SenderId: Message.SenderId }
-        }));
+        Request.on('succeeded', () => {
+
+            this.Hub.publish(aUserIds, {
+                type: 'message.created',
+                payload: { ConversationId: Message.ConversationId, MessageId: Message.Id, SenderId: Message.SenderId }
+            });
+            this.Push.notifyNewMessage(Message);
+
+        });
 
     }
 

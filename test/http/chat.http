@@ -72,3 +72,35 @@ Content-Type: application/json
 {
     "Theme": "Dark"
 }
+
+### Chave publica VAPID (null se o push nao estiver configurado no servidor)
+GET {{chat}}/PushPublicKey()
+Authorization: Bearer {{token}}
+
+### Inscrever este navegador no Web Push (endpoint precisa ser https)
+POST {{chat}}/SubscribePush
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "Endpoint": "https://push.example.test/fake-endpoint",
+    "P256dh": "BFakeP256dhKeyForLocalTestsOnly",
+    "Auth": "fakeAuthForLocalTests",
+    "UserAgent": "Chrome"
+}
+
+### Remover a inscricao deste navegador (so remove se for do usuario logado)
+POST {{chat}}/UnsubscribePush
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "Endpoint": "https://push.example.test/fake-endpoint"
+}
+
+### Enviar push de teste para todas as inscricoes do usuario
+POST {{chat}}/SendPushTest
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{}

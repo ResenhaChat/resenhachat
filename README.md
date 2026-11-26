@@ -23,6 +23,13 @@ Dev usa SQLite em memória com os dados de `test/data`. Produção usa HANA.
 - `CORS_ORIGINS` (opcional) lista origens extras separadas por vírgula. Além dela, são aceitos `http://localhost:*` e `https://internschat.github.io`.
 - Atrás do proxy do Cloud Foundry o IP do cliente vem de `req.ip` (`trust proxy` = 1), usado no limite de tentativas de login.
 
+### Notificações push (Web Push)
+
+- Variáveis: `VAPID_PUBLIC_KEY` e `VAPID_PRIVATE_KEY` (par VAPID), `VAPID_SUBJECT` (opcional, `mailto:` de contato) e `APP_URL` (URL do front aberta ao clicar na notificação; padrão `http://localhost:8080/index.html`).
+- Gere o par com `npx web-push generate-vapid-keys`. Sem as chaves o push fica desativado: `PushPublicKey()` devolve `null` e o chat funciona normalmente.
+- Dev: coloque as variáveis em `.env` (ignorado pelo git; o CAP o carrega no perfil `development`).
+- Produção: `cf set-env Resenha-srv VAPID_PUBLIC_KEY <chave-publica>`, o mesmo para `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` e `APP_URL`; depois `cf restage Resenha-srv`.
+
 ## Usuários de teste (senha `123456`)
 
 | Usuário | E-mail | Papel |
@@ -37,7 +44,7 @@ Dev usa SQLite em memória com os dados de `test/data`. Produção usa HANA.
 - `POST /auth/login` `{ Login, Password }` (Login = e-mail ou usuário)
 - `POST /auth/refresh` `{ RefreshToken }` e `POST /auth/logout` `{ RefreshToken }`
 - OData V4 em `/service/Chat` (`Authorization: Bearer <AccessToken>`): `People`, `Me`, `MySettings`, `Conversations`,
-  `Members`, `Messages`, `SendMessage`, `MarkAsRead`
+  `Members`, `Messages`, `SendMessage`, `MarkAsRead`, `PushPublicKey()`, `SubscribePush`, `UnsubscribePush`, `SendPushTest`
 - WebSocket em `/ws?token=<AccessToken>`; eventos em `srv/realtime/events.ts`
 
 Exemplos prontos em `test/http/auth.http` e `test/http/chat.http`.

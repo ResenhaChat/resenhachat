@@ -5,6 +5,7 @@ import { oProfileRouteFactory } from './profile';
 import { oConversationRouteFactory } from './conversation';
 import { oMessageRouteFactory } from './message';
 import { oMemberRouteFactory } from './member';
+import { oPushRouteFactory } from './push';
 
 const makeMainRoute = (): MainRoute => {
 
@@ -13,7 +14,8 @@ const makeMainRoute = (): MainRoute => {
         oProfileRouteFactory,
         oConversationRouteFactory,
         oMessageRouteFactory,
-        oMemberRouteFactory
+        oMemberRouteFactory,
+        oPushRouteFactory
     ]);
 
 };

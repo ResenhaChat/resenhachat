@@ -42,6 +42,21 @@ export class UserRepositoryImplementation extends BaseRepositoryImplementation<U
     }
 
 
+    public async findNotificationsDisabled(UserIds: string[]): Promise<string[]> {
+
+        if (!UserIds.length) {
+            return [];
+        }
+
+        const oRows: { User_ID: string }[] = await cds.run(
+            SELECT.from(ServiceLocator.getEntity('UserSettings')).columns('User_ID').where({ User_ID: { in: UserIds }, NotificationsEnabled: false })
+        );
+
+        return oRows.map((oRow) => oRow.User_ID);
+
+    }
+
+
     public async updateLastSeen(UserId: string, LastSeenAt: string): Promise<void> {
 
         await cds.run(UPDATE(this.getEntity()).set({ LastSeenAt }).where({ ID: UserId }));

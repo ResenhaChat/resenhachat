@@ -38,6 +38,8 @@ export class ConversationModel extends BaseModel {
 
     public get Kind() { return this.properties.Kind; }
 
+    public get Name() { return this.properties.Name; }
+
     public get OnlyAdminsCanPost() { return this.properties.OnlyAdminsCanPost; }
 
     public toEntityObject(): Conversation {

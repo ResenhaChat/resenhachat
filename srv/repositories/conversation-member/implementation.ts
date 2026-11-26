@@ -28,6 +28,17 @@ export class ConversationMemberRepositoryImplementation extends BaseRepositoryIm
     }
 
 
+    public async findMutedUserIds(ConversationId: string, Now: string): Promise<string[]> {
+
+        const oRows: { User_ID: string }[] = await cds.run(
+            SELECT.from(this.getEntity()).columns('User_ID').where({ Conversation_ID: ConversationId }).and({ MutedUntil: { '>': Now } })
+        );
+
+        return oRows.map((oRow) => oRow.User_ID);
+
+    }
+
+
     public async create(Member: ConversationMemberModel): Promise<void> {
 
         await cds.run(INSERT.into(this.getEntity()).entries(Member.toEntityObject()));

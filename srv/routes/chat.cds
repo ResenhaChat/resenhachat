@@ -108,4 +108,9 @@ service ChatService {
     action SendMessage(Conversation_ID: UUID, Text: String(4000), ReplyTo_ID: UUID) returns Messages;
     action MarkAsRead(Conversation_ID: UUID);
 
+    function PushPublicKey() returns String(500);
+    action   SubscribePush(Endpoint: String(500), P256dh: String(200), Auth: String(100), UserAgent: String(255));
+    action   UnsubscribePush(Endpoint: String(500));
+    action   SendPushTest();
+
 }

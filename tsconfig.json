@@ -13,6 +13,7 @@
     "rootDir": "./",
     "sourceMap": true,
     "skipLibCheck": true,
+    "types": ["node", "@cap-js/cds-types"],
     "paths": {
       "@models/*": ["./@cds-models/*/index.ts"],
       "@/*": ["./srv/*"],
