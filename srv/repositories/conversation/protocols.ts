@@ -8,4 +8,5 @@ export interface ConversationRepository extends BaseRepository<ConversationModel
     findByDirectKey(DirectKey: string): Promise<ConversationModel | null>;
     updateLastMessage(Id: string, LastMessageAt: string, LastMessage: string, LastMessageKey?: string, LastMessageArgs?: string): Promise<void>;
     countUnread(UserId: string, ConversationIds: string[]): Promise<Map<string, number>>;
+    bumpAvatarVersion(Id: string): Promise<void>;
 }

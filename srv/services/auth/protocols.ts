@@ -34,6 +34,8 @@ export type AuthResult = {
     AccessToken: string;
     RefreshToken: string;
     ExpiresIn: number;
+    MediaToken: string;
+    MediaTokenExpiresAt: number;
     User: AuthUser;
 };
 

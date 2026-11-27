@@ -6,3 +6,4 @@ export * from './not-found';
 export * from './conflict';
 export * from './too-many-requests';
 export * from './server-error';
+export * from './payload-too-large';

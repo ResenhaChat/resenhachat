@@ -5,6 +5,7 @@ export type RealtimeEvent =
     | { type: 'conversation.read'; payload: { ConversationId: string; UserId: string; LastReadAt: string } }
     | { type: 'conversation.created'; payload: { ConversationId: string } }
     | { type: 'conversation.updated'; payload: { ConversationId: string } }
+    | { type: 'user.updated'; payload: { UserId: string } }
     | { type: 'members.changed'; payload: { ConversationId: string } }
     | { type: 'typing'; payload: { ConversationId: string; UserId: string } }
     | { type: 'ping'; payload: Record<string, never> }

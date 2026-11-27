@@ -10,6 +10,8 @@ export type ConversationProperties = AuditProperties & {
     IsPublic?: boolean;
     OnlyAdminsCanPost: boolean;
     DirectKey?: string;
+    AvatarMimeType?: string;
+    AvatarVersion?: number;
     LastMessageAt?: string;
     LastMessage?: string;
     LastMessageKey?: string;
@@ -34,6 +36,8 @@ export class ConversationModel extends BaseModel {
             IsPublic: Conversation.IsPublic === true,
             OnlyAdminsCanPost: Conversation.OnlyAdminsCanPost === true,
             DirectKey: Conversation.DirectKey ?? undefined,
+            AvatarMimeType: Conversation.AvatarMimeType ?? undefined,
+            AvatarVersion: Conversation.AvatarVersion ?? 0,
             LastMessageAt: Conversation.LastMessageAt ?? undefined,
             LastMessage: Conversation.LastMessage ?? undefined,
             LastMessageKey: Conversation.LastMessageKey ?? undefined,
@@ -57,11 +61,15 @@ export class ConversationModel extends BaseModel {
 
     public get DirectKey() { return this.properties.DirectKey; }
 
+    public get AvatarVersion(): number { return this.properties.AvatarVersion ?? 0; }
+
     public get LastMessageKey() { return this.properties.LastMessageKey; }
 
     public get LastMessageArgs() { return this.properties.LastMessageArgs; }
 
     public get IsDirect() { return this.properties.Kind === 'Direct'; }
+
+    public get IsGeneral() { return this.properties.Kind === 'General'; }
 
     public get IsGroupOrChannel() { return GROUP_KINDS.includes(this.properties.Kind); }
 

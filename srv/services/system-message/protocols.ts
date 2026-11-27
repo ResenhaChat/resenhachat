@@ -11,7 +11,9 @@ export type SystemMessageKey =
     | 'system.leftAdmin'
     | 'system.becameOwner'
     | 'system.nameChanged'
-    | 'system.descriptionChanged';
+    | 'system.descriptionChanged'
+    | 'system.photoChanged'
+    | 'system.photoRemoved';
 
 export type SystemEvent = {
     Key: SystemMessageKey;

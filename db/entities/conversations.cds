@@ -15,6 +15,7 @@ entity Conversations : cuid, managed {
     Description       : String(500);
     Avatar            : LargeBinary @Core.MediaType: AvatarMimeType;
     AvatarMimeType    : String(100) @Core.IsMediaType;
+    AvatarVersion     : Integer default 0;
     IsPublic          : Boolean default false;
     OnlyAdminsCanPost : Boolean default false;
     DirectKey         : String(80);

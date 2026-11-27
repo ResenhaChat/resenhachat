@@ -1,5 +1,6 @@
 import { PushService } from '@/services/push';
 import { PushServiceImplementation } from '@/services/push/implementation';
+import { oAttachmentRepositoryFactory } from '../repositories/attachment';
 import { oConversationRepositoryFactory } from '../repositories/conversation';
 import { oConversationMemberRepositoryFactory } from '../repositories/conversation-member';
 import { oPushSubscriptionRepositoryFactory } from '../repositories/push-subscription';
@@ -13,7 +14,8 @@ const makePushService = (): PushService => {
         oConversationMemberRepositoryFactory,
         oUserRepositoryFactory,
         oConversationRepositoryFactory,
-        oRealtimeHubFactory
+        oRealtimeHubFactory,
+        oAttachmentRepositoryFactory
     );
 
 };

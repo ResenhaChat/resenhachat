@@ -27,17 +27,24 @@ entity Messages : cuid, managed {
                        on Views.Message = $self;
 }
 
-entity MessageAttachments : cuid {
-    Message         : Association to Messages @mandatory;
-    Content         : LargeBinary @Core.MediaType: MimeType;
-    MimeType        : String(100) @Core.IsMediaType;
-    FileName        : String(255);
-    Size            : Integer;
-    DurationSeconds : Integer;
-    Width           : Integer;
-    Height          : Integer;
-    Thumbnail       : LargeBinary @Core.MediaType: ThumbnailMimeType;
+/**
+ * Upload de mídia. Nasce sem Message (upload pendente) e só vira anexo quando uma mensagem o referencia.
+ */
+entity MessageAttachments : cuid, managed {
+    Message           : Association to Messages;
+    Conversation      : Association to Conversations @mandatory;
+    Uploader          : Association to Users @mandatory;
+    Kind              : MessageKind;
+    Content           : LargeBinary @Core.MediaType: MimeType @Core.ContentDisposition.Filename: FileName;
+    MimeType          : String(100) @Core.IsMediaType;
+    FileName          : String(255);
+    Size              : Integer;
+    DurationSeconds   : Integer;
+    Width             : Integer;
+    Height            : Integer;
+    Thumbnail         : LargeBinary @Core.MediaType: ThumbnailMimeType;
     ThumbnailMimeType : String(100) @Core.IsMediaType;
+    UploadedAt        : Timestamp;
 }
 
 @assert.unique: {Reaction: [

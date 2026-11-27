@@ -8,6 +8,7 @@ export type SendMessageInput = {
     Conversation_ID?: string;
     Text?: string;
     ReplyTo_ID?: string;
+    Upload_ID?: string;
 };
 
 export interface MessageService extends BaseService<Message> {

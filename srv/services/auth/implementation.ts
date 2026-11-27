@@ -298,6 +298,8 @@ export class AuthServiceImplementation extends BaseServiceImplementation<unknown
             AccessToken: JwtTokens.sign(User.Id),
             RefreshToken: sRefreshToken,
             ExpiresIn: AUTH_LIMITS.accessTokenSeconds,
+            MediaToken: JwtTokens.signMedia(User.Id),
+            MediaTokenExpiresAt: Date.now() + AUTH_LIMITS.mediaTokenSeconds * 1000,
             User: { ID: User.Id, DisplayName: User.DisplayName, Username: User.Username, Email: User.Email }
         };
 

@@ -1,5 +1,6 @@
 /* Teste de fumaca. Suba o servidor (npx cds-tsx serve all --port 4004) e rode: node test/scripts/smoke.js */
 const WebSocket = require('ws');
+const sharp = require('sharp');
 
 const HOST = process.env.RESENHA_HOST || 'localhost:4004';
 const GERAL = '00000000-0000-4000-8000-000000000001';
@@ -48,6 +49,181 @@ function check(sName, bOk, oDetail) {
 }
 
 const find = (aRows, sId) => aRows.find((oRow) => oRow.ID === sId);
+
+async function raw(sMethod, sPath, sToken, Body, oHeaders = {}) {
+    const oResponse = await fetch(`http://${HOST}${sPath}`, {
+        method: sMethod,
+        headers: { ...(sToken ? { Authorization: `Bearer ${sToken}` } : {}), ...oHeaders },
+        body: Body
+    });
+
+    return { status: oResponse.status, headers: oResponse.headers, buffer: Buffer.from(await oResponse.arrayBuffer()) };
+}
+
+async function mediaTokenOf(Login) {
+    const oResult = await http('POST', '/auth/login', null, { Login, Password: '123456' });
+
+    return oResult.body.MediaToken;
+}
+
+const createUpload = (sToken, Body) => http('POST', '/service/Chat/CreateUpload', sToken, Body);
+
+const sendUpload = (sToken, Body) => http('POST', '/service/Chat/SendMessage', sToken, Body);
+
+const CACHE_HEADER = 'private, max-age=31536000, immutable';
+
+async function mediaChecks(sDavi, sAna, sJoao, oAnaWs) {
+    const sDaviMt = await mediaTokenOf('davi');
+    const sAnaMt = await mediaTokenOf('ana@resenha.dev');
+    const sJoaoMt = await mediaTokenOf('joao');
+    const sPng = await sharp({ create: { width: 800, height: 600, channels: 3, background: '#2a7' } }).png().toBuffer();
+    const sJpeg = await sharp({ create: { width: 300, height: 200, channels: 3, background: '#36c' } }).jpeg().toBuffer();
+    const sPdf = Buffer.from('%PDF-1.4 relatorio de teste');
+
+    const oImageUpload = await createUpload(sDavi, { Conversation_ID: GERAL, Kind: 'Image', MimeType: 'image/png', FileName: 'foto.png', Size: sPng.length });
+    const sImageId = oImageUpload.body.ID;
+    check('CreateUpload devolve ID', oImageUpload.status === 200 && !!sImageId, oImageUpload);
+    check('PUT Content grava (204)', (await raw('PUT', `/service/Chat/Uploads(${sImageId})/Content`, sDavi, sPng, { 'Content-Type': 'image/png' })).status === 204);
+    const oImage = await http('GET', `/service/Chat/Uploads(${sImageId})`, sDavi);
+    check('imagem regravada em webp 800x600', oImage.body.MimeType === 'image/webp' && oImage.body.Width === 800 && oImage.body.Height === 600, oImage.body);
+
+    const oSent = await sendUpload(sDavi, { Conversation_ID: GERAL, Upload_ID: sImageId });
+    check('SendMessage com Upload_ID sem texto', oSent.status < 300 && oSent.body.Kind === 'Image', oSent);
+    const oExpanded = await http('GET', `/service/Chat/Messages?$filter=ID eq ${oSent.body.ID}&$expand=Attachment`, sDavi);
+    const sAttachmentId = oExpanded.body.value?.[0]?.Attachment?.ID;
+    check('Messages $expand=Attachment traz o anexo', !!sAttachmentId, oExpanded.body);
+
+    const oThumb = await raw('GET', `/service/Chat/Attachments(${sAttachmentId})/Thumbnail?mt=${sDaviMt}`);
+    check('Thumbnail com mt = 200 image/webp', oThumb.status === 200 && oThumb.headers.get('content-type') === 'image/webp', oThumb.status);
+    check('Thumbnail com cache immutable e nosniff', oThumb.headers.get('cache-control') === CACHE_HEADER && oThumb.headers.get('x-content-type-options') === 'nosniff', oThumb.headers.get('cache-control'));
+    check('Thumbnail sem token = 401', (await raw('GET', `/service/Chat/Attachments(${sAttachmentId})/Thumbnail`)).status === 401);
+    const oContent = await raw('GET', `/service/Chat/Attachments(${sAttachmentId})/Content?mt=${sDaviMt}`);
+    check('Content inline com o MIME real', oContent.status === 200 && oContent.headers.get('content-type') === 'image/webp' && oContent.headers.get('content-disposition').startsWith('inline'), oContent.status);
+    check('imagem com download=1 sai como attachment', (await raw('GET', `/service/Chat/Attachments(${sAttachmentId})/Content?mt=${sDaviMt}&download=1`)).headers.get('content-disposition').startsWith('attachment'));
+    check('token de acesso em mt = 401', (await raw('GET', `/service/Chat/Attachments(${sAttachmentId})/Content?mt=${sDavi}`)).status === 401);
+    check('token de midia no Authorization = 401', (await raw('GET', '/service/Chat/Conversations', sDaviMt)).status === 401);
+    const oProjectUpload = await createUpload(sDavi, { Conversation_ID: PROJETO, Kind: 'Image', MimeType: 'image/png', FileName: 'projeto.png', Size: sPng.length });
+    await raw('PUT', `/service/Chat/Uploads(${oProjectUpload.body.ID})/Content`, sDavi, sPng, { 'Content-Type': 'image/png' });
+    const oProjectSent = await sendUpload(sDavi, { Conversation_ID: PROJETO, Upload_ID: oProjectUpload.body.ID });
+    const oProjectExpanded = await http('GET', `/service/Chat/Messages?$filter=ID eq ${oProjectSent.body.ID}&$expand=Attachment`, sDavi);
+    const sProjectAttachmentId = oProjectExpanded.body.value?.[0]?.Attachment?.ID;
+    check('joao nao le anexo de grupo alheio (403/404)', [403, 404].includes((await raw('GET', `/service/Chat/Attachments(${sProjectAttachmentId})/Content?mt=${sJoaoMt}`)).status));
+    check('joao nao le metadado de anexo de grupo alheio', [403, 404].includes((await http('GET', `/service/Chat/Attachments(${sProjectAttachmentId})`, sJoao)).status));
+
+    check('arquivo acima de 25 MB = 413', (await createUpload(sDavi, { Conversation_ID: GERAL, Kind: 'File', MimeType: 'application/pdf', FileName: 'grande.pdf', Size: 26 * 1024 * 1024 })).status === 413);
+    const oDeclared = await createUpload(sDavi, { Conversation_ID: GERAL, Kind: 'Image', MimeType: 'image/png', FileName: 'pequena.png', Size: 100 });
+    check('PUT acima do Size declarado = 413', (await raw('PUT', `/service/Chat/Uploads(${oDeclared.body.ID})/Content`, sDavi, sPng, { 'Content-Type': 'image/png' })).status === 413);
+    const oMismatchUpload = await createUpload(sDavi, { Conversation_ID: GERAL, Kind: 'Image', MimeType: 'image/png', FileName: 'troca.png', Size: sPng.length });
+    check('PUT com Content-Type diferente = 400', (await raw('PUT', `/service/Chat/Uploads(${oMismatchUpload.body.ID})/Content`, sDavi, sPng, { 'Content-Type': 'image/jpeg' })).status === 400);
+    check('extensao executavel = 400', (await createUpload(sDavi, { Conversation_ID: GERAL, Kind: 'File', MimeType: 'application/octet-stream', FileName: 'virus.exe', Size: 100 })).status === 400);
+    check('MIME svg em imagem = 400', (await createUpload(sDavi, { Conversation_ID: GERAL, Kind: 'Image', MimeType: 'image/svg+xml', FileName: 'x.svg', Size: 100 })).status === 400);
+    check('largura acima de 10000 = 400', (await createUpload(sDavi, { Conversation_ID: GERAL, Kind: 'Video', MimeType: 'video/mp4', FileName: 'v.mp4', Size: 100, Width: 20000 })).status === 400);
+    check('duracao acima de 3600 = 400', (await createUpload(sDavi, { Conversation_ID: GERAL, Kind: 'Video', MimeType: 'video/mp4', FileName: 'v.mp4', Size: 100, DurationSeconds: 4000 })).status === 400);
+
+    const oPending = await createUpload(sDavi, { Conversation_ID: GERAL, Kind: 'Image', MimeType: 'image/png', FileName: 'pendente.png', Size: 100 });
+    check('SendMessage antes do envio concluido = 400', (await sendUpload(sDavi, { Conversation_ID: GERAL, Upload_ID: oPending.body.ID })).status === 400);
+    check('reenvio do mesmo upload = 409', (await sendUpload(sDavi, { Conversation_ID: GERAL, Upload_ID: sImageId })).status === 409);
+
+    const oPdfUpload = await createUpload(sDavi, { Conversation_ID: GERAL, Kind: 'File', MimeType: 'application/pdf', FileName: 'relatorio.pdf', Size: sPdf.length });
+    check('PUT do PDF = 204', (await raw('PUT', `/service/Chat/Uploads(${oPdfUpload.body.ID})/Content`, sDavi, sPdf, { 'Content-Type': 'application/pdf' })).status === 204);
+    check('upload de outra conversa = 403', (await sendUpload(sDavi, { Conversation_ID: PROJETO, Upload_ID: oPdfUpload.body.ID })).status === 403);
+    const oPdfSent = await sendUpload(sDavi, { Conversation_ID: GERAL, Text: 'Segue o relatorio', Upload_ID: oPdfUpload.body.ID });
+    check('SendMessage com legenda no PDF', oPdfSent.status < 300 && oPdfSent.body.Text === 'Segue o relatorio' && oPdfSent.body.Kind === 'File', oPdfSent);
+    const oLast = await http('GET', `/service/Chat/Conversations(${GERAL})?$select=LastMessage`, sDavi);
+    check('LastMessage da midia com legenda', (oLast.body.LastMessage ?? '').includes('Segue o relatorio'), oLast.body);
+
+    const oPdfExpanded = await http('GET', `/service/Chat/Messages?$filter=ID eq ${oPdfSent.body.ID}&$expand=Attachment`, sDavi);
+    const oFile = await raw('GET', `/service/Chat/Attachments(${oPdfExpanded.body.value?.[0]?.Attachment?.ID})/Content?mt=${sDaviMt}`);
+    check('PDF baixa como attachment octet-stream', oFile.status === 200 && oFile.headers.get('content-type') === 'application/octet-stream' && oFile.headers.get('content-disposition') === "attachment; filename*=UTF-8''relatorio.pdf", oFile.headers.get('content-disposition'));
+
+    const oBefore = await http('GET', `/service/Chat/Me(${ANA})?$select=AvatarVersion`, sAna);
+    const iBefore = oBefore.body.AvatarVersion;
+    check('PUT avatar do proprio perfil = 204', (await raw('PUT', `/service/Chat/Me(${ANA})/Avatar`, sAna, sJpeg, { 'Content-Type': 'image/jpeg' })).status === 204);
+    const oAfterPut = await http('GET', `/service/Chat/Me(${ANA})?$select=AvatarVersion`, sAna);
+    check('AvatarVersion incrementa no PUT', oAfterPut.body.AvatarVersion === iBefore + 1, oAfterPut.body);
+    const oAvatar = await raw('GET', `/service/Chat/People(${ANA})/Avatar?v=${iBefore + 1}&mt=${sAnaMt}`);
+    check('avatar GET 200 image/webp com cache', oAvatar.status === 200 && oAvatar.headers.get('content-type') === 'image/webp' && oAvatar.headers.get('cache-control') === CACHE_HEADER, oAvatar.status);
+    check('avatar sem token = 401', (await raw('GET', `/service/Chat/People(${ANA})/Avatar`)).status === 401);
+    const sGif = await sharp({ create: { width: 2, height: 2, channels: 3, background: '#000' } }).gif().toBuffer();
+    check('avatar em GIF = 400', (await raw('PUT', `/service/Chat/Me(${ANA})/Avatar`, sAna, sGif, { 'Content-Type': 'image/gif' })).status === 400);
+    check('PATCH de Avatar em JSON = 400', (await http('PATCH', `/service/Chat/Me(${ANA})`, sAna, { Avatar: 'AAAA' })).status === 400);
+
+    const oGroup = await http('POST', '/service/Chat/CreateConversation', sDavi, { Kind: 'Group', Name: 'Fotos', MemberIds: [ANA] });
+    const sGroupId = oGroup.body.ID;
+    check('membro comum nao troca a foto do grupo (403)', (await raw('PUT', `/service/Chat/Conversations(${sGroupId})/Avatar`, sAna, sJpeg, { 'Content-Type': 'image/jpeg' })).status === 403);
+    check('dono troca a foto do grupo (204)', (await raw('PUT', `/service/Chat/Conversations(${sGroupId})/Avatar`, sDavi, sJpeg, { 'Content-Type': 'image/jpeg' })).status === 204);
+    const oGroupRow = await http('GET', `/service/Chat/Conversations(${sGroupId})?$select=AvatarVersion`, sDavi);
+    check('AvatarVersion do grupo = 1', oGroupRow.body.AvatarVersion === 1, oGroupRow.body);
+    const oGroupMessages = await fetch(`http://${HOST}/service/Chat/Messages?$filter=Conversation_ID eq ${sGroupId}&$orderby=createdAt desc&$top=1`, { headers: { Authorization: `Bearer ${sDavi}`, 'Accept-Language': 'pt-BR' } }).then((oResponse) => oResponse.json());
+    check('aviso de troca de foto no grupo (pt-BR)', (oGroupMessages.value?.[0]?.Text ?? '').includes('mudou a foto'), oGroupMessages);
+    check('dono remove a foto do grupo (204)', (await raw('DELETE', `/service/Chat/Conversations(${sGroupId})/Avatar`, sDavi)).status === 204);
+
+    const oDirect = await http('POST', '/service/Chat/StartDirect', sDavi, { User_ID: ANA });
+    check('avatar de conversa Direct = 403', (await raw('PUT', `/service/Chat/Conversations(${oDirect.body.ID})/Avatar`, sDavi, sJpeg, { 'Content-Type': 'image/jpeg' })).status === 403);
+    const oPeerFlags = await http('GET', `/service/Chat/Members?$filter=Conversation_ID eq ${oDirect.body.ID} and User_ID eq ${ANA}&$expand=Conversation`, sDavi);
+    check('Direct expõe DirectPeerHasAvatar/Version do par', oPeerFlags.body.value?.[0]?.Conversation?.DirectPeerHasAvatar === true && oPeerFlags.body.value?.[0]?.Conversation?.DirectPeerAvatarVersion === iBefore + 1, oPeerFlags.body);
+
+    const oChannel = await http('POST', '/service/Chat/CreateConversation', sDavi, { Kind: 'Channel', Name: 'Canal publico', IsPublic: true, MemberIds: [ANA] });
+    check('dono troca a foto do canal publico (204)', (await raw('PUT', `/service/Chat/Conversations(${oChannel.body.ID})/Avatar`, sDavi, sJpeg, { 'Content-Type': 'image/jpeg' })).status === 204);
+    const oChannelAvatar = await raw('GET', `/service/Chat/PublicChannels(${oChannel.body.ID})/Avatar?mt=${sJoaoMt}`);
+    check('nao membro le a foto do canal publico via PublicChannels', oChannelAvatar.status === 200 && oChannelAvatar.headers.get('content-type') === 'image/webp', oChannelAvatar.status);
+    check('nao membro nao le Conversations do canal', [403, 404].includes((await raw('GET', `/service/Chat/Conversations(${oChannel.body.ID})/Avatar?mt=${sJoaoMt}`)).status));
+
+    const oDelete = await raw('DELETE', `/service/Chat/Me(${ANA})/Avatar`, sAna);
+    check('DELETE avatar = 204', oDelete.status === 204, oDelete.status);
+    const oAfterDelete = await http('GET', `/service/Chat/Me(${ANA})?$select=AvatarVersion,AvatarMimeType`, sAna);
+    check('DELETE incrementa AvatarVersion e limpa o MIME', oAfterDelete.body.AvatarVersion === iBefore + 2 && oAfterDelete.body.AvatarMimeType === null, oAfterDelete.body);
+    check('avatar removido = 204 sem conteudo', (await raw('GET', `/service/Chat/People(${ANA})/Avatar?mt=${sAnaMt}`)).status === 204);
+
+    await wait(400);
+    check('ana recebe user.updated do avatar', oAnaWs.events.some((o) => o.type === 'user.updated' && o.payload.UserId === ANA), oAnaWs.events);
+    check('ana recebe conversation.updated do grupo', oAnaWs.events.some((o) => o.type === 'conversation.updated' && o.payload.ConversationId === sGroupId), oAnaWs.events);
+}
+
+async function securityChecks(sDavi, sAna, sJoao) {
+    const sPng = await sharp({ create: { width: 30, height: 30, channels: 3, background: '#f00' } }).png().toBuffer();
+    const sJpg = await sharp({ create: { width: 30, height: 30, channels: 3, background: '#0f0' } }).jpeg().toBuffer();
+    const sSvg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"><rect width="20" height="20" fill="red"/></svg>');
+    const sSmallPdf = Buffer.from('%PDF-1.4 teste');
+
+    const oJpegAsPng = await createUpload(sDavi, { Conversation_ID: GERAL, Kind: 'Image', MimeType: 'image/png', FileName: 'disfarcado.png', Size: sJpg.length });
+    check('JPEG declarado como PNG = 400', (await raw('PUT', `/service/Chat/Uploads(${oJpegAsPng.body.ID})/Content`, sDavi, sJpg, { 'Content-Type': 'image/png' })).status === 400);
+    const oSvgAsPng = await createUpload(sDavi, { Conversation_ID: GERAL, Kind: 'Image', MimeType: 'image/png', FileName: 'svg.png', Size: sSvg.length });
+    check('SVG declarado como PNG = 400', (await raw('PUT', `/service/Chat/Uploads(${oSvgAsPng.body.ID})/Content`, sDavi, sSvg, { 'Content-Type': 'image/png' })).status === 400);
+    const oPngAsGif = await createUpload(sDavi, { Conversation_ID: GERAL, Kind: 'Image', MimeType: 'image/gif', FileName: 'nao.gif', Size: sPng.length });
+    check('PNG declarado como GIF = 400', (await raw('PUT', `/service/Chat/Uploads(${oPngAsGif.body.ID})/Content`, sDavi, sPng, { 'Content-Type': 'image/gif' })).status === 400);
+
+    const oImageThumb = await createUpload(sDavi, { Conversation_ID: GERAL, Kind: 'Image', MimeType: 'image/png', FileName: 'miniatura.png', Size: sPng.length });
+    check('miniatura enviada pelo cliente em Kind Image = 400', (await raw('PUT', `/service/Chat/Uploads(${oImageThumb.body.ID})/Thumbnail`, sDavi, sJpg, { 'Content-Type': 'image/jpeg' })).status === 400);
+
+    check('extensao .hta bloqueada = 400', (await createUpload(sDavi, { Conversation_ID: GERAL, Kind: 'File', MimeType: 'application/octet-stream', FileName: 'x.hta', Size: 10 })).status === 400);
+    const oNormalized = await createUpload(sDavi, { Conversation_ID: GERAL, Kind: 'File', MimeType: 'application/pdf', FileName: 'rel\u0001atorio.pdf. ', Size: 10 });
+    check('nome normalizado (sem controle e ponto final)', oNormalized.body.FileName === 'relatorio.pdf', oNormalized.body);
+
+    const aQuota = [];
+    for (let i = 0; i < 11; i += 1) {
+        aQuota.push((await createUpload(sJoao, { Conversation_ID: GERAL, Kind: 'File', MimeType: 'application/pdf', FileName: `cota${i}.pdf`, Size: 10 })).status);
+    }
+    check('11o upload pendente do mesmo usuario = 429', aQuota[10] === 429 && aQuota.slice(0, 10).every((iStatus) => iStatus === 200), aQuota);
+
+    const oRace = await createUpload(sAna, { Conversation_ID: GERAL, Kind: 'File', MimeType: 'application/pdf', FileName: 'corrida.pdf', Size: sSmallPdf.length });
+    await raw('PUT', `/service/Chat/Uploads(${oRace.body.ID})/Content`, sAna, sSmallPdf, { 'Content-Type': 'application/pdf' });
+    const [oFirst, oSecond] = await Promise.all([sendUpload(sAna, { Conversation_ID: GERAL, Upload_ID: oRace.body.ID }), sendUpload(sAna, { Conversation_ID: GERAL, Upload_ID: oRace.body.ID })]);
+    check('dois envios simultaneos do mesmo upload: um 200 e um 409', [oFirst.status, oSecond.status].sort().join(',') === '200,409', [oFirst.status, oSecond.status]);
+
+    const oDeleteUpload = await createUpload(sAna, { Conversation_ID: GERAL, Kind: 'File', MimeType: 'application/pdf', FileName: 'apagar.pdf', Size: 10 });
+    check('DELETE de Content em Uploads = 400', (await raw('DELETE', `/service/Chat/Uploads(${oDeleteUpload.body.ID})/Content`, sAna)).status === 400);
+
+    const oOversized = await createUpload(sAna, { Conversation_ID: GERAL, Kind: 'File', MimeType: 'application/pdf', FileName: 'maior.pdf', Size: 10 });
+    const oOversizedPut = await raw('PUT', `/service/Chat/Uploads(${oOversized.body.ID})/Content`, sAna, Buffer.alloc(100, 1), { 'Content-Type': 'application/pdf' });
+    check('corpo maior que o Size declarado = 413 sem "0 MB"', oOversizedPut.status === 413 && !oOversizedPut.buffer.toString().includes('0 MB'), oOversizedPut.status);
+
+    const iBefore = (await http('GET', `/service/Chat/Me(${ANA})?$select=AvatarVersion`, sAna)).body.AvatarVersion;
+    const sAvatarJpeg = await sharp({ create: { width: 40, height: 40, channels: 3, background: '#36c' } }).jpeg().toBuffer();
+    await Promise.all([1, 2].map(() => raw('PUT', `/service/Chat/Me(${ANA})/Avatar`, sAna, sAvatarJpeg, { 'Content-Type': 'image/jpeg' })));
+    const iAfter = (await http('GET', `/service/Chat/Me(${ANA})?$select=AvatarVersion`, sAna)).body.AvatarVersion;
+    check('dois avatares simultaneos somam +2 (incremento atomico)', iAfter === iBefore + 2, { iBefore, iAfter });
+}
 
 (async () => {
     const sDavi = await login('davi');
@@ -194,6 +370,8 @@ const find = (aRows, sId) => aRows.find((oRow) => oRow.ID === sId);
     check('logout 204', (await http('POST', '/auth/logout', null, { RefreshToken: oRefresh.body.RefreshToken })).status === 204);
     check('refresh apos logout 401', (await http('POST', '/auth/refresh', null, { RefreshToken: oRefresh.body.RefreshToken })).status === 401);
 
+    await mediaChecks(sDavi, sAna, sJoao, oAnaWs);
+    await securityChecks(sDavi, sAna, sJoao);
     oAnaWs.socket.close();
     oJoaoWs.socket.close();
     process.exit(process.exitCode || 0);

@@ -8,6 +8,8 @@ export type UserProperties = AuditProperties & {
     DisplayName: string;
     Username: string;
     About?: string;
+    AvatarMimeType?: string;
+    AvatarVersion?: number;
     LastSeenAt?: string;
 };
 
@@ -28,6 +30,8 @@ export class UserModel extends BaseModel {
             DisplayName: User.DisplayName as string,
             Username: User.Username as string,
             About: User.About ?? undefined,
+            AvatarMimeType: User.AvatarMimeType ?? undefined,
+            AvatarVersion: User.AvatarVersion ?? 0,
             LastSeenAt: User.LastSeenAt ?? undefined,
             ...this.retrieveAudit(User)
         }));
@@ -43,6 +47,10 @@ export class UserModel extends BaseModel {
     public get DisplayName() { return this.properties.DisplayName; }
 
     public get Username() { return this.properties.Username; }
+
+    public get HasAvatar(): boolean { return !!this.properties.AvatarMimeType; }
+
+    public get AvatarVersion(): number { return this.properties.AvatarVersion ?? 0; }
 
     public toEntityObject(): User {
 

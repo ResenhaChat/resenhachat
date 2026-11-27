@@ -2,6 +2,7 @@ import './srv/configs/module-alias';
 import cds from '@sap/cds';
 import { oAuthRouter } from './srv/auth/authRouter';
 import { corsMiddleware } from './srv/middlewares/cors';
+import { mediaHeadersMiddleware } from './srv/middlewares/media-headers';
 import { JwtTokens } from './srv/infrastructure/JwtTokens';
 import { oRealtimeServerFactory } from './srv/factories/realtime/server';
 
@@ -11,6 +12,7 @@ cds.on('bootstrap', (app) => {
 
     app.set('trust proxy', 1);
     app.use(corsMiddleware);
+    app.use(mediaHeadersMiddleware);
     app.use('/auth', oAuthRouter);
 
 });

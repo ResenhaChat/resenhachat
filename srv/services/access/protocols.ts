@@ -12,6 +12,7 @@ export type ConversationAccess = {
 export interface AccessService extends BaseService<ConversationModel> {
     findConversation(ConversationId: string): Promise<Either<AbstractError, ConversationModel>>;
     requireMember(ConversationId: string, UserId: string): Promise<Either<AbstractError, ConversationAccess>>;
+    requirePoster(ConversationId: string, UserId: string): Promise<Either<AbstractError, ConversationAccess>>;
     requireGroupMember(ConversationId: string, UserId: string): Promise<Either<AbstractError, ConversationAccess>>;
     existingUserIds(UserIds: string[]): Promise<string[]>;
 }

@@ -98,6 +98,13 @@ export class ConversationRepositoryImplementation extends BaseRepositoryImplemen
     }
 
 
+    public async bumpAvatarVersion(Id: string): Promise<void> {
+
+        await cds.run(UPDATE(this.getEntity()).set({ AvatarVersion: { '+=': 1 } }).where({ ID: Id }));
+
+    }
+
+
     public async countUnread(UserId: string, ConversationIds: string[]): Promise<Map<string, number>> {
 
         const oCounts = new Map<string, number>();
@@ -132,7 +139,7 @@ export class ConversationRepositoryImplementation extends BaseRepositoryImplemen
 
     protected columns(): string[] {
 
-        return ['ID', 'Kind', 'Name', 'Description', 'IsPublic', 'OnlyAdminsCanPost', 'DirectKey', 'LastMessageAt', 'LastMessage', 'LastMessageKey', 'LastMessageArgs'];
+        return ['ID', 'Kind', 'Name', 'Description', 'IsPublic', 'OnlyAdminsCanPost', 'DirectKey', 'AvatarMimeType', 'AvatarVersion', 'LastMessageAt', 'LastMessage', 'LastMessageKey', 'LastMessageArgs'];
 
     }
 

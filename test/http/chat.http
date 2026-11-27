@@ -207,3 +207,82 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {}
+
+### Criar upload de imagem (Kind Image|Video|File; Width/Height/DurationSeconds opcionais, so video)
+POST {{chat}}/CreateUpload
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "Conversation_ID": "{{geral}}",
+    "Kind": "Image",
+    "MimeType": "image/png",
+    "FileName": "foto.png",
+    "Size": 2048
+}
+
+### Enviar o conteudo do upload (stream; o servidor converte a imagem para webp; Size declarado deve bater)
+PUT {{chat}}/Uploads(00000000-0000-0000-0000-000000000000)/Content
+Authorization: Bearer {{token}}
+Content-Type: image/png
+
+< ./foto.png
+
+### Enviar miniatura de video (jpeg ou webp, ate 300 KB)
+PUT {{chat}}/Uploads(00000000-0000-0000-0000-000000000000)/Thumbnail
+Authorization: Bearer {{token}}
+Content-Type: image/jpeg
+
+< ./miniatura.jpg
+
+### Enviar mensagem com o upload (legenda opcional; Text pode faltar quando ha Upload_ID)
+POST {{chat}}/SendMessage
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "Conversation_ID": "{{geral}}",
+    "Text": "Olha essa foto",
+    "Upload_ID": "00000000-0000-0000-0000-000000000000"
+}
+
+### Mensagens com o anexo expandido
+GET {{chat}}/Messages?$filter=Conversation_ID eq {{geral}}&$expand=Attachment&$top=20
+Authorization: Bearer {{token}}
+
+### Token de midia para <img src> (vem no login/refresh como MediaToken; expira em 24 h)
+@mt = {{login.response.body.MediaToken}}
+
+### Miniatura do anexo (sem Authorization: usa ?mt=)
+GET {{chat}}/Attachments(00000000-0000-0000-0000-000000000000)/Thumbnail?mt={{mt}}
+
+### Conteudo do anexo inline (imagem/video); com download=1 sai como attachment
+GET {{chat}}/Attachments(00000000-0000-0000-0000-000000000000)/Content?mt={{mt}}&download=1
+
+### Trocar a foto do proprio perfil (stream; saida webp 512x512; AvatarVersion += 1)
+PUT {{chat}}/Me(a0000000-0000-4000-8000-000000000001)/Avatar
+Authorization: Bearer {{token}}
+Content-Type: image/jpeg
+
+< ./avatar.jpg
+
+### Remover a foto do proprio perfil (AvatarVersion += 1)
+DELETE {{chat}}/Me(a0000000-0000-4000-8000-000000000001)/Avatar
+Authorization: Bearer {{token}}
+
+### Foto de uma pessoa (v = AvatarVersion para cache; mt para <img src>)
+GET {{chat}}/People(a0000000-0000-4000-8000-000000000002)/Avatar?v=1&mt={{mt}}
+
+### Trocar a foto de grupo ou canal (Owner/Admin; nao vale para Direct; Geral so Owner)
+PUT {{chat}}/Conversations(00000000-0000-4000-8000-000000000002)/Avatar
+Authorization: Bearer {{token}}
+Content-Type: image/png
+
+< ./grupo.png
+
+### Remover a foto de grupo ou canal
+DELETE {{chat}}/Conversations(00000000-0000-4000-8000-000000000002)/Avatar
+Authorization: Bearer {{token}}
+
+### Foto de canal publico para quem nao e membro (so o stream Avatar)
+GET {{chat}}/PublicChannels(00000000-0000-4000-8000-000000000005)/Avatar?v=1&mt={{mt}}

@@ -11,6 +11,7 @@ import { oDirectRouteFactory } from './direct';
 import { oGroupRouteFactory } from './group';
 import { oMembershipRouteFactory } from './membership';
 import { oRoleRouteFactory } from './role';
+import { oMediaRouteFactory } from './media';
 
 const makeMainRoute = (): MainRoute => {
 
@@ -25,7 +26,8 @@ const makeMainRoute = (): MainRoute => {
         oDirectRouteFactory,
         oGroupRouteFactory,
         oMembershipRouteFactory,
-        oRoleRouteFactory
+        oRoleRouteFactory,
+        oMediaRouteFactory
     ]);
 
 };

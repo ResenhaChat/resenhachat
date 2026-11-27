@@ -18,6 +18,7 @@ entity Users : cuid, managed {
     About          : String(200);
     Avatar         : LargeBinary @Core.MediaType: AvatarMimeType;
     AvatarMimeType : String(100) @Core.IsMediaType;
+    AvatarVersion  : Integer default 0;
     LastSeenAt     : Timestamp;
     Settings       : Composition of one UserSettings
                          on Settings.User = $self;

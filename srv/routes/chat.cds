@@ -13,6 +13,7 @@ service ChatService {
             About,
             Avatar,
             AvatarMimeType,
+            AvatarVersion,
             LastSeenAt,
             virtual IsOnline : Boolean
         };
@@ -32,7 +33,8 @@ service ChatService {
             Username @readonly,
             About,
             Avatar,
-            AvatarMimeType,
+            AvatarMimeType @readonly,
+            AvatarVersion @readonly,
             LastSeenAt @readonly,
             Settings @(readonly) : redirected to MySettings
         };
@@ -66,8 +68,9 @@ service ChatService {
             Kind @readonly,
             Name,
             Description,
-            Avatar @readonly,
+            Avatar,
             AvatarMimeType @readonly,
+            AvatarVersion @readonly,
             IsPublic,
             OnlyAdminsCanPost,
             LastMessageAt @readonly,
@@ -81,6 +84,8 @@ service ChatService {
             virtual UnreadCount : Integer,
             virtual Title : String(80),
             virtual DirectPeer_ID : UUID,
+            virtual DirectPeerHasAvatar : Boolean,
+            virtual DirectPeerAvatarVersion : Integer,
             virtual MemberCount : Integer,
             virtual MyRole : String(10)
         };
@@ -117,6 +122,9 @@ service ChatService {
             ID,
             Name,
             Description,
+            Avatar,
+            AvatarMimeType,
+            AvatarVersion,
             LastMessageAt,
             virtual MemberCount : Integer,
             virtual IsMember : Boolean
@@ -133,16 +141,67 @@ service ChatService {
             *,
             Conversation : redirected to Conversations,
             Sender       : redirected to People,
-            ReplyTo      : redirected to Messages
+            ReplyTo      : redirected to Messages,
+            Attachment   : redirected to Attachments
         } excluding {
-            Attachment,
             Reactions,
             Views,
             SystemKey,
             SystemArgs
         };
 
-    action SendMessage(Conversation_ID: UUID, Text: String(4000), ReplyTo_ID: UUID) returns Messages;
+    /** Uploads ainda não enviados: só o dono lê e grava os streams Content e Thumbnail. */
+    @restrict: [
+        {
+            grant: 'READ',
+            where: 'Uploader.ID = $user and Message.ID is null'
+        },
+        {
+            grant: 'UPDATE',
+            where: 'Uploader.ID = $user and Message.ID is null'
+        }
+    ]
+    entity Uploads       as
+        projection on entities.MessageAttachments {
+            ID @readonly,
+            Message @(readonly) : redirected to Messages,
+            Uploader @(readonly) : redirected to People,
+            Kind @readonly,
+            MimeType @readonly,
+            FileName @readonly,
+            Size @readonly,
+            Width @readonly,
+            Height @readonly,
+            DurationSeconds @readonly,
+            Content,
+            Thumbnail,
+            ThumbnailMimeType @readonly,
+            UploadedAt @readonly
+        };
+
+    @readonly
+    @restrict: [{
+        grant: 'READ',
+        where: 'exists Message.Conversation.Members[User.ID = $user]'
+    }]
+    entity Attachments   as
+        projection on entities.MessageAttachments {
+            ID,
+            Message : redirected to Messages,
+            Kind,
+            MimeType,
+            FileName,
+            Size,
+            Width,
+            Height,
+            DurationSeconds,
+            Content,
+            Thumbnail,
+            ThumbnailMimeType
+        };
+
+    action CreateUpload(Conversation_ID: UUID, Kind: String(10), MimeType: String(100), FileName: String(255), Size: Integer, Width: Integer, Height: Integer, DurationSeconds: Integer) returns Uploads;
+    action SendMessage(Conversation_ID: UUID, Text: String(4000), ReplyTo_ID: UUID, Upload_ID: UUID) returns Messages;
     action MarkAsRead(Conversation_ID: UUID);
     action StartDirect(User_ID: UUID) returns Conversations;
     action CreateConversation(Kind: String(10), Name: String(80), Description: String(500), MemberIds: many UUID, IsPublic: Boolean, OnlyAdminsCanPost: Boolean) returns Conversations;

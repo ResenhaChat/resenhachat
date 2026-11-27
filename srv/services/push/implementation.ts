@@ -10,6 +10,7 @@ import { PushSubscriptionModel } from '@/models/push-subscription';
 import { RealtimeHub } from '@/realtime/hub';
 import { ConversationRepository } from '@/repositories/conversation';
 import { ConversationMemberRepository } from '@/repositories/conversation-member';
+import { AttachmentRepository } from '@/repositories/attachment';
 import { PushSubscriptionRepository } from '@/repositories/push-subscription';
 import { UserRepository } from '@/repositories/user';
 import { PushService, PushSubscriptionInput } from './protocols';
@@ -43,7 +44,8 @@ export class PushServiceImplementation extends BaseServiceImplementation<PushSub
         private readonly Members: ConversationMemberRepository,
         private readonly Users: UserRepository,
         private readonly Conversations: ConversationRepository,
-        private readonly Hub: RealtimeHub
+        private readonly Hub: RealtimeHub,
+        private readonly Attachments: AttachmentRepository
     ) {
 
         super();
@@ -215,7 +217,7 @@ export class PushServiceImplementation extends BaseServiceImplementation<PushSub
 
         return {
             title: bDirect ? sSenderName : `${sSenderName} · ${oConversation?.Name}`,
-            body: this.messageBody(Message),
+            body: await this.messageBody(Message),
             tag: Message.ConversationId,
             url: `${this.appUrl()}#/c/${Message.ConversationId}`
         };
@@ -223,17 +225,32 @@ export class PushServiceImplementation extends BaseServiceImplementation<PushSub
     }
 
 
-    private messageBody(Message: MessageModel): string {
+    private async messageBody(Message: MessageModel): Promise<string> {
 
         if (Message.IsViewOnce) {
             return Messages.text('push.viewOnce', PUSH_LOCALE);
         }
 
         if (Message.Kind !== TEXT_KIND) {
-            return Messages.text('push.media', PUSH_LOCALE);
+            return this.mediaBody(Message);
         }
 
         return (Message.Text ?? '').slice(0, PUSH_LIMITS.bodyText);
+
+    }
+
+
+    private async mediaBody(Message: MessageModel): Promise<string> {
+
+        const oAttachment = await this.Attachments.findByMessageId(Message.Id);
+
+        if (!oAttachment) {
+            return Messages.text('push.media', PUSH_LOCALE);
+        }
+
+        const oPreview = oAttachment.previewFor(Message.Text);
+
+        return Messages.text(oPreview.Key, PUSH_LOCALE, oPreview.Args);
 
     }
 

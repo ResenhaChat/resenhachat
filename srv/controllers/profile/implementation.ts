@@ -1,3 +1,4 @@
+import { Request } from '@sap/cds';
 import { Me } from '@models/ChatService';
 import { ProfileService } from '@/services/profile';
 import { ProfileController } from './protocols';
@@ -8,6 +9,13 @@ export class ProfileControllerImplementation extends BaseControllerImplementatio
     constructor(protected readonly Service: ProfileService) {
 
         super();
+
+    }
+
+
+    public announceUpdate(UserId: string, ChangedFields: string[], Request: Request): void {
+
+        this.Service.announceUpdate(UserId, ChangedFields, Request);
 
     }
 

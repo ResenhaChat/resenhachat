@@ -6,6 +6,8 @@ const DEV_SECRET = 'resenha-dev-secret-nao-usar-em-producao';
 
 const MIN_SECRET_LENGTH = 32;
 
+const MEDIA_AUDIENCE = 'media';
+
 export type VerifiedToken = {
     UserId: string;
     ExpiresAt: number;
@@ -34,15 +36,42 @@ export class JwtTokens {
     }
 
 
+    public static signMedia(UserId: string): string {
+
+        return jwt.sign({ aud: MEDIA_AUDIENCE }, this.secret(), {
+            algorithm: 'HS256',
+            subject: UserId,
+            expiresIn: AUTH_LIMITS.mediaTokenSeconds
+        });
+
+    }
+
+
     public static verify(Token: string): VerifiedToken | null {
 
-        const sSecret = this.secret();
+        return this.decode(Token, undefined);
+
+    }
+
+
+    public static verifyMedia(Token: string): VerifiedToken | null {
+
+        return this.decode(Token, MEDIA_AUDIENCE);
+
+    }
+
+
+    private static decode(Token: string, Audience: string | undefined): VerifiedToken | null {
 
         try {
 
-            const oPayload = jwt.verify(Token, sSecret, { algorithms: ['HS256'] });
+            const oPayload = jwt.verify(Token, this.secret(), { algorithms: ['HS256'] });
 
             if (typeof oPayload !== 'object' || typeof oPayload.sub !== 'string' || typeof oPayload.exp !== 'number') {
+                return null;
+            }
+
+            if (oPayload.aud !== Audience) {
                 return null;
             }
 

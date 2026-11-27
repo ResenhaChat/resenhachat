@@ -72,6 +72,13 @@ export class UserRepositoryImplementation extends BaseRepositoryImplementation<U
     }
 
 
+    public async bumpAvatarVersion(UserId: string): Promise<void> {
+
+        await cds.run(UPDATE(this.getEntity()).set({ AvatarVersion: { '+=': 1 } }).where({ ID: UserId }));
+
+    }
+
+
     public async updateLastSeen(UserId: string, LastSeenAt: string): Promise<void> {
 
         await cds.run(UPDATE(this.getEntity()).set({ LastSeenAt }).where({ ID: UserId }));
@@ -81,7 +88,7 @@ export class UserRepositoryImplementation extends BaseRepositoryImplementation<U
 
     protected columns(): string[] {
 
-        return ['ID', 'Email', 'PasswordHash', 'DisplayName', 'Username', 'About', 'LastSeenAt'];
+        return ['ID', 'Email', 'PasswordHash', 'DisplayName', 'Username', 'About', 'AvatarMimeType', 'AvatarVersion', 'LastSeenAt'];
 
     }
 

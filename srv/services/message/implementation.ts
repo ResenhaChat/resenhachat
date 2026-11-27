@@ -1,17 +1,28 @@
 import { Request } from '@sap/cds';
 import { Either, left, right } from '@sweet-monads/either';
 import { Message } from '@models/ChatService';
-import { AbstractError, NotFoundError, PermissionDenied, ValidationError } from '@/errors';
-import { LAST_MESSAGE_PREVIEW_LENGTH } from '@/constants/conversations';
+import { AbstractError, ValidationError } from '@/errors';
+import { LAST_MESSAGE_PREVIEW_LENGTH, SYSTEM_MESSAGE_LOCALE } from '@/constants/conversations';
 import { MESSAGE_LIMITS } from '@/constants/message-limits';
+import { Messages } from '@/infrastructure/Messages';
+import { SystemText } from '@/infrastructure/SystemText';
+import { AttachmentModel } from '@/models/attachment';
 import { MessageModel } from '@/models/message';
 import { ConversationMemberRepository } from '@/repositories/conversation-member';
 import { ConversationRepository } from '@/repositories/conversation';
 import { MessageRepository } from '@/repositories/message';
 import { RealtimeHub } from '@/realtime/hub';
+import { AccessService } from '@/services/access';
+import { MediaService } from '@/services/media';
 import { PushService } from '@/services/push';
 import { MessageService, SendMessageInput } from './protocols';
 import { BaseServiceImplementation } from '../base/implementation';
+
+type LastMessage = {
+    Text: string;
+    Key?: string;
+    Args?: string;
+};
 
 export class MessageServiceImplementation extends BaseServiceImplementation<Message> implements MessageService {
 
@@ -20,7 +31,9 @@ export class MessageServiceImplementation extends BaseServiceImplementation<Mess
         private readonly Conversations: ConversationRepository,
         private readonly Members: ConversationMemberRepository,
         private readonly Hub: RealtimeHub,
-        private readonly Push: PushService
+        private readonly Push: PushService,
+        private readonly Media: MediaService,
+        private readonly Access: AccessService
     ) {
 
         super();
@@ -39,7 +52,7 @@ export class MessageServiceImplementation extends BaseServiceImplementation<Mess
         return this.execute(async () => {
 
             const sConversationId = Input.Conversation_ID as string;
-            const oPermission = await this.checkCanPost(sConversationId, UserId);
+            const oPermission = await this.Access.requirePoster(sConversationId, UserId);
 
             if (oPermission.isLeft()) {
                 return left(oPermission.value);
@@ -51,7 +64,23 @@ export class MessageServiceImplementation extends BaseServiceImplementation<Mess
                 return left(oReply.value);
             }
 
-            const oMessage = await this.store(sConversationId, UserId, Input);
+            const oUpload = await this.uploadOf(UserId, Input);
+
+            if (oUpload.isLeft()) {
+                return left(oUpload.value);
+            }
+
+            const oMessage = await this.store(sConversationId, UserId, Input, oUpload.value);
+
+            if (oUpload.value) {
+
+                const oLinked = await this.Media.linkToMessage(oUpload.value.Id, oMessage.Id);
+
+                if (oLinked.isLeft()) {
+                    return left(oLinked.value);
+                }
+
+            }
 
             await this.publishCreated(Request, oMessage);
 
@@ -68,11 +97,11 @@ export class MessageServiceImplementation extends BaseServiceImplementation<Mess
             return left(new ValidationError('error.conversationRequired'));
         }
 
-        if (this.isBlank(Input.Text)) {
+        if (!Input.Upload_ID && this.isBlank(Input.Text)) {
             return left(new ValidationError('error.messageTextRequired'));
         }
 
-        if ((Input.Text as string).trim().length > MESSAGE_LIMITS.maxTextLength) {
+        if (this.textOf(Input).length > MESSAGE_LIMITS.maxTextLength) {
             return left(new ValidationError('error.messageTextTooLong', { max: MESSAGE_LIMITS.maxTextLength }));
         }
 
@@ -81,25 +110,9 @@ export class MessageServiceImplementation extends BaseServiceImplementation<Mess
     }
 
 
-    private async checkCanPost(ConversationId: string, UserId: string): Promise<Either<AbstractError, boolean>> {
+    private textOf(Input: SendMessageInput): string {
 
-        const oMember = await this.Members.findMembership(ConversationId, UserId);
-
-        if (!oMember) {
-            return left(new PermissionDenied('error.notConversationMember'));
-        }
-
-        const oConversation = await this.Conversations.findById(ConversationId);
-
-        if (!oConversation) {
-            return left(new NotFoundError('error.conversationNotFound'));
-        }
-
-        if (oConversation.OnlyAdminsCanPost && !oMember.CanManage) {
-            return left(new PermissionDenied('error.onlyAdminsCanPost'));
-        }
-
-        return right(true);
+        return typeof Input.Text === 'string' ? Input.Text.trim() : '';
 
     }
 
@@ -121,15 +134,29 @@ export class MessageServiceImplementation extends BaseServiceImplementation<Mess
     }
 
 
-    private async store(ConversationId: string, UserId: string, Input: SendMessageInput): Promise<MessageModel> {
+    private async uploadOf(UserId: string, Input: SendMessageInput): Promise<Either<AbstractError, AttachmentModel | null>> {
 
-        const sText = (Input.Text as string).trim();
+        if (!Input.Upload_ID) {
+            return right(null);
+        }
+
+        const oUpload = await this.Media.requireReadyUpload(UserId, Input.Conversation_ID as string, Input.Upload_ID);
+
+        return oUpload.isLeft() ? left(oUpload.value) : right(oUpload.value);
+
+    }
+
+
+    private async store(ConversationId: string, UserId: string, Input: SendMessageInput, Upload: AttachmentModel | null): Promise<MessageModel> {
+
+        const sText = this.textOf(Input);
+        const oLast = this.lastMessageOf(sText, Upload);
         const oNew = MessageModel.with({
             Id: this.generateUUID(),
             ConversationId,
             SenderId: UserId,
-            Kind: 'Text',
-            Text: sText,
+            Kind: Upload?.Kind ?? 'Text',
+            Text: sText || undefined,
             ReplyToId: Input.ReplyTo_ID ?? undefined,
             IsViewOnce: false
         });
@@ -139,10 +166,27 @@ export class MessageServiceImplementation extends BaseServiceImplementation<Mess
         const oSaved = await this.Repository.findById(oNew.Id) as MessageModel;
         const sCreatedAt = oSaved.CreatedAt as string;
 
-        await this.Conversations.updateLastMessage(ConversationId, sCreatedAt, this.preview(sText));
+        await this.Conversations.updateLastMessage(ConversationId, sCreatedAt, oLast.Text, oLast.Key, oLast.Args);
         await this.Members.markRead(ConversationId, UserId, sCreatedAt);
 
         return oSaved;
+
+    }
+
+
+    private lastMessageOf(Text: string, Upload: AttachmentModel | null): LastMessage {
+
+        if (!Upload) {
+            return { Text: this.preview(Text) };
+        }
+
+        const oPreview = Upload.previewFor(Text);
+
+        return {
+            Text: this.preview(Messages.text(oPreview.Key, SYSTEM_MESSAGE_LOCALE, oPreview.Args)),
+            Key: oPreview.Key,
+            Args: SystemText.serialize(oPreview.Args)
+        };
 
     }
 

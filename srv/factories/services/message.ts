@@ -4,6 +4,8 @@ import { oMessageRepositoryFactory } from '../repositories/message';
 import { oConversationRepositoryFactory } from '../repositories/conversation';
 import { oConversationMemberRepositoryFactory } from '../repositories/conversation-member';
 import { oRealtimeHubFactory } from '../realtime/hub';
+import { oAccessServiceFactory } from './access';
+import { oMediaServiceFactory } from './media';
 import { oPushServiceFactory } from './push';
 
 const makeMessageService = (): MessageService => {
@@ -13,7 +15,9 @@ const makeMessageService = (): MessageService => {
         oConversationRepositoryFactory,
         oConversationMemberRepositoryFactory,
         oRealtimeHubFactory,
-        oPushServiceFactory
+        oPushServiceFactory,
+        oMediaServiceFactory,
+        oAccessServiceFactory
     );
 
 };

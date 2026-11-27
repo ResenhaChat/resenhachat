@@ -5,6 +5,7 @@ import { SystemText } from '@/infrastructure/SystemText';
 import { ConversationRepository } from '@/repositories/conversation';
 import { ConversationMemberRepository } from '@/repositories/conversation-member';
 import { MessageRepository } from '@/repositories/message';
+import { UserModel } from '@/models/user';
 import { UserRepository } from '@/repositories/user';
 import { ListingService } from './protocols';
 import { BaseServiceImplementation } from '../base/implementation';
@@ -12,11 +13,20 @@ import { BaseServiceImplementation } from '../base/implementation';
 type ConversationSummary = {
     Title: string;
     DirectPeer_ID: string | null;
+    DirectPeerHasAvatar: boolean | null;
+    DirectPeerAvatarVersion: number | null;
     MemberCount: number;
     MyRole: string | null;
 };
 
-const EMPTY_SUMMARY: ConversationSummary = { Title: '', DirectPeer_ID: null, MemberCount: 0, MyRole: null };
+const EMPTY_SUMMARY: ConversationSummary = {
+    Title: '',
+    DirectPeer_ID: null,
+    DirectPeerHasAvatar: null,
+    DirectPeerAvatarVersion: null,
+    MemberCount: 0,
+    MyRole: null
+};
 
 type LastMessageHolder = { LastMessage?: string | null };
 
@@ -202,15 +212,18 @@ export class ListingServiceImplementation extends BaseServiceImplementation<Conv
         const oCounts = await this.Members.countByConversationIds(aIds);
         const oRoles = await this.Members.findRoles(UserId, aIds);
         const oPeers = await this.Members.findDirectPeers(UserId, aDirectIds);
-        const oNames = await this.namesOf([...oPeers.values()]);
+        const oProfiles = await this.profilesOf([...oPeers.values()]);
 
         aConversations.forEach((oConversation) => {
 
             const sPeerId = oPeers.get(oConversation.Id);
+            const oPeer = sPeerId ? oProfiles.get(sPeerId) : undefined;
 
             oSummaries.set(oConversation.Id, {
-                Title: this.titleOf(oConversation, sPeerId, oNames),
+                Title: this.titleOf(oConversation, oPeer),
                 DirectPeer_ID: sPeerId ?? null,
+                DirectPeerHasAvatar: oPeer ? oPeer.HasAvatar : null,
+                DirectPeerAvatarVersion: oPeer ? oPeer.AvatarVersion : null,
                 MemberCount: oCounts.get(oConversation.Id) ?? 0,
                 MyRole: oRoles.get(oConversation.Id) ?? null
             });
@@ -222,23 +235,23 @@ export class ListingServiceImplementation extends BaseServiceImplementation<Conv
     }
 
 
-    private async namesOf(UserIds: string[]): Promise<Map<string, string>> {
+    private async profilesOf(UserIds: string[]): Promise<Map<string, UserModel>> {
 
         if (!UserIds.length) {
-            return new Map<string, string>();
+            return new Map<string, UserModel>();
         }
 
         const aUsers = await this.Users.findByIds(UserIds);
 
-        return new Map<string, string>(aUsers.map((oUser): [string, string] => [oUser.Id, oUser.DisplayName]));
+        return new Map<string, UserModel>(aUsers.map((oUser): [string, UserModel] => [oUser.Id, oUser]));
 
     }
 
 
-    private titleOf(Conversation: ConversationModel, PeerId: string | undefined, Names: Map<string, string>): string {
+    private titleOf(Conversation: ConversationModel, Peer: UserModel | undefined): string {
 
         if (Conversation.IsDirect) {
-            return Names.get(PeerId ?? '') ?? '';
+            return Peer?.DisplayName ?? '';
         }
 
         return Conversation.Name ?? '';

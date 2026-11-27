@@ -57,6 +57,25 @@ export class AccessServiceImplementation extends BaseServiceImplementation<Conve
     }
 
 
+    public async requirePoster(ConversationId: string, UserId: string): Promise<Either<AbstractError, ConversationAccess>> {
+
+        const oAccess = await this.requireMember(ConversationId, UserId);
+
+        if (oAccess.isLeft()) {
+            return oAccess;
+        }
+
+        const { Conversation, Actor } = oAccess.value;
+
+        if (Conversation.OnlyAdminsCanPost && !Actor.CanManage) {
+            return left(new PermissionDenied('error.onlyAdminsCanPost'));
+        }
+
+        return oAccess;
+
+    }
+
+
     public async requireGroupMember(ConversationId: string, UserId: string): Promise<Either<AbstractError, ConversationAccess>> {
 
         const oAccess = await this.requireMember(ConversationId, UserId);

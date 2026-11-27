@@ -1,12 +1,21 @@
-import { User } from '@sap/cds';
+import { Request, User } from '@sap/cds';
 import { Either, left, right } from '@sweet-monads/either';
 import { Me } from '@models/ChatService';
 import { AbstractError, ValidationError } from '@/errors';
-import { AVATAR_MAX_BYTES, AVATAR_MIME_TYPES } from '@/constants/avatar';
+import { RealtimeHub } from '@/realtime/hub';
 import { BaseServiceImplementation } from '../base/implementation';
 import { ProfileService } from './protocols';
 
+const PUBLIC_PROFILE_FIELDS: readonly string[] = ['DisplayName', 'About'];
+
 export class ProfileServiceImplementation extends BaseServiceImplementation<Me> implements ProfileService {
+
+    constructor(private readonly Hub: RealtimeHub) {
+
+        super();
+
+    }
+
 
     public async beforeUpdate(Profile: Me, LoggedUser: User): Promise<Either<AbstractError, boolean>> {
 
@@ -14,12 +23,8 @@ export class ProfileServiceImplementation extends BaseServiceImplementation<Me> 
             return left(new ValidationError('error.displayNameRequired'));
         }
 
-        if ('AvatarMimeType' in Profile && !this.isAllowedMimeType(Profile.AvatarMimeType)) {
-            return left(new ValidationError('error.avatarMimeType'));
-        }
-
-        if ('Avatar' in Profile && this.byteSizeOf(Profile.Avatar) > AVATAR_MAX_BYTES) {
-            return left(new ValidationError('error.avatarTooLarge', { max: AVATAR_MAX_BYTES }));
+        if ('Avatar' in Profile || 'AvatarMimeType' in Profile) {
+            return left(new ValidationError('error.avatarFieldNotEditable'));
         }
 
         return right(true);
@@ -27,24 +32,16 @@ export class ProfileServiceImplementation extends BaseServiceImplementation<Me> 
     }
 
 
-    private isAllowedMimeType(MimeType: unknown): boolean {
+    public announceUpdate(UserId: string, ChangedFields: string[], Request: Request): void {
 
-        return MimeType === null || (typeof MimeType === 'string' && AVATAR_MIME_TYPES.includes(MimeType));
-
-    }
-
-
-    private byteSizeOf(Avatar: unknown): number {
-
-        if (typeof Avatar === 'string') {
-            return Buffer.byteLength(Avatar, 'base64');
+        if (!ChangedFields.some((sField) => PUBLIC_PROFILE_FIELDS.includes(sField))) {
+            return;
         }
 
-        if (Buffer.isBuffer(Avatar)) {
-            return Avatar.length;
-        }
-
-        return 0;
+        Request.on('succeeded', () => this.Hub.publish(this.Hub.onlineUserIds(), {
+            type: 'user.updated',
+            payload: { UserId }
+        }));
 
     }
 
