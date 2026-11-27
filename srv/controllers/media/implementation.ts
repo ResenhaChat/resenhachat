@@ -37,9 +37,9 @@ export class MediaControllerImplementation extends BaseControllerImplementation<
     }
 
 
-    public deliveryOf(Kind: string, MimeType: string, Download: boolean): MediaDeliveryPlan {
+    public deliveryOf(Kind: string, MimeType: string, Download: boolean, Property: string): MediaDeliveryPlan {
 
-        return this.Service.deliveryOf(Kind, MimeType, Download);
+        return this.Service.deliveryOf(Kind, MimeType, Download, Property);
 
     }
 

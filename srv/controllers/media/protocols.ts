@@ -7,5 +7,5 @@ export interface MediaController extends BaseController<AttachmentModel> {
     createUpload(UserId: string, Input: CreateUploadInput): Promise<BaseControllerResponse>;
     prepareContent(UserId: string, UploadId: string, Payload: MediaPayload): Promise<BaseControllerResponse>;
     prepareThumbnail(UserId: string, UploadId: string, Payload: MediaPayload): Promise<BaseControllerResponse>;
-    deliveryOf(Kind: string, MimeType: string, Download: boolean): MediaDeliveryPlan;
+    deliveryOf(Kind: string, MimeType: string, Download: boolean, Property: string): MediaDeliveryPlan;
 }

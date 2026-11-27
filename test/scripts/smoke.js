@@ -225,6 +225,32 @@ async function securityChecks(sDavi, sAna, sJoao) {
     check('dois avatares simultaneos somam +2 (incremento atomico)', iAfter === iBefore + 2, { iBefore, iAfter });
 }
 
+async function pdfThumbnailChecks(sAna) {
+    const sAnaMt = await mediaTokenOf('ana@resenha.dev');
+    const sPdf = Buffer.from('%PDF-1.4 previa de teste');
+    const sThumb = await sharp({ create: { width: 64, height: 90, channels: 3, background: '#fff' } }).jpeg().toBuffer();
+
+    const oPdf = await createUpload(sAna, { Conversation_ID: GERAL, Kind: 'File', MimeType: 'application/pdf', FileName: 'previa.pdf', Size: sPdf.length });
+    check('PDF: upload criado', !!oPdf.body.ID, oPdf.body);
+    check('PDF: PUT Content = 204', (await raw('PUT', `/service/Chat/Uploads(${oPdf.body.ID})/Content`, sAna, sPdf, { 'Content-Type': 'application/pdf' })).status === 204);
+    check('PDF: PUT Thumbnail (primeira pagina) = 204', (await raw('PUT', `/service/Chat/Uploads(${oPdf.body.ID})/Thumbnail`, sAna, sThumb, { 'Content-Type': 'image/jpeg' })).status === 204);
+
+    const oSent = await sendUpload(sAna, { Conversation_ID: GERAL, Text: 'Veja o PDF', Upload_ID: oPdf.body.ID });
+    const oExpanded = await http('GET', `/service/Chat/Messages?$filter=ID eq ${oSent.body.ID}&$expand=Attachment`, sAna);
+    const sAttachmentId = oExpanded.body.value?.[0]?.Attachment?.ID;
+    check('PDF: anexo expandido', !!sAttachmentId, oExpanded.body);
+
+    const oThumb = await raw('GET', `/service/Chat/Attachments(${sAttachmentId})/Thumbnail?mt=${sAnaMt}`);
+    check('PDF: GET Thumbnail = 200 image/webp inline', oThumb.status === 200 && oThumb.headers.get('content-type') === 'image/webp' && oThumb.headers.get('content-disposition') === 'inline', oThumb.headers.get('content-disposition'));
+
+    const oContent = await raw('GET', `/service/Chat/Attachments(${sAttachmentId})/Content?mt=${sAnaMt}`);
+    check('PDF: Content continua attachment octet-stream', oContent.status === 200 && oContent.headers.get('content-type') === 'application/octet-stream' && oContent.headers.get('content-disposition').startsWith('attachment'), oContent.headers.get('content-disposition'));
+
+    const oTxt = await createUpload(sAna, { Conversation_ID: GERAL, Kind: 'File', MimeType: 'text/plain', FileName: 'nota.txt', Size: 5 });
+    await raw('PUT', `/service/Chat/Uploads(${oTxt.body.ID})/Content`, sAna, Buffer.from('nota!'), { 'Content-Type': 'text/plain' });
+    check('.txt com miniatura = 400 thumbnailNotAllowed', (await raw('PUT', `/service/Chat/Uploads(${oTxt.body.ID})/Thumbnail`, sAna, sThumb, { 'Content-Type': 'image/jpeg' })).status === 400);
+}
+
 (async () => {
     const sDavi = await login('davi');
     const sAna = await login('ana@resenha.dev');
@@ -372,6 +398,7 @@ async function securityChecks(sDavi, sAna, sJoao) {
 
     await mediaChecks(sDavi, sAna, sJoao, oAnaWs);
     await securityChecks(sDavi, sAna, sJoao);
+    await pdfThumbnailChecks(sAna);
     oAnaWs.socket.close();
     oJoaoWs.socket.close();
     process.exit(process.exitCode || 0);

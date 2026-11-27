@@ -42,5 +42,5 @@ export interface MediaService extends BaseService<AttachmentModel> {
     prepareThumbnail(UserId: string, UploadId: string, Payload: MediaPayload): Promise<Either<AbstractError, UploadThumbnail>>;
     requireReadyUpload(UserId: string, ConversationId: string, UploadId: string): Promise<Either<AbstractError, AttachmentModel>>;
     linkToMessage(UploadId: string, MessageId: string): Promise<Either<AbstractError, boolean>>;
-    deliveryOf(Kind: string, MimeType: string, Download: boolean): MediaDeliveryPlan;
+    deliveryOf(Kind: string, MimeType: string, Download: boolean, Property: string): MediaDeliveryPlan;
 }

@@ -26,14 +26,16 @@ const DISPOSITION_MARKER = '$mediaContentDispositionType';
 
 const FILE_NAME_MARKER = '$mediaContentDispositionFilename';
 
+const PROPERTY_MARKER = '$mediaProperty';
+
 const BATCH_SUFFIX = '/$batch';
 
 export class MediaDelivery {
 
-    public static requireKind(Query: unknown): void {
+    public static requireStreamColumns(Query: unknown): void {
 
-        const oSelect = (Query as { SELECT?: { columns?: QueryColumn[] } } | undefined)?.SELECT;
-        const aColumns = oSelect?.columns;
+        const oQuery = Query as { SELECT?: { columns?: QueryColumn[] }; _propertyAccess?: string } | undefined;
+        const aColumns = oQuery?.SELECT?.columns;
 
         if (!aColumns?.some((oColumn) => oColumn.as === STREAM_MARKER)) {
             return;
@@ -42,6 +44,8 @@ export class MediaDelivery {
         if (!aColumns.some((oColumn) => oColumn.ref?.[0] === 'Kind')) {
             aColumns.push({ ref: ['Kind'] });
         }
+
+        aColumns.push({ val: oQuery?._propertyAccess ?? '', as: PROPERTY_MARKER } as QueryColumn);
 
     }
 

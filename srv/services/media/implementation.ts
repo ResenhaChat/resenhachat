@@ -1,7 +1,7 @@
 import { Either, left, right } from '@sweet-monads/either';
 import { AbstractError, ConflictError, NotFoundError, PermissionDenied, TooManyRequestsError, ValidationError } from '@/errors';
 import { UUID_PATTERN } from '@/constants/ids';
-import { BLOCKED_FILE_EXTENSIONS, FILE_NAME_CONTROL_PATTERN, FILE_NAME_MAX_LENGTH, FILE_NAME_TRAILING_PATTERN, IMAGE_MIME_TYPES, MEDIA_LIMITS, MIME_TYPE_PATTERN, THUMBNAIL_MIME_TYPES, UPLOAD_KINDS, VIDEO_MIME_TYPES } from '@/constants/media';
+import { BLOCKED_FILE_EXTENSIONS, FILE_NAME_CONTROL_PATTERN, FILE_NAME_MAX_LENGTH, FILE_NAME_TRAILING_PATTERN, IMAGE_MIME_TYPES, MEDIA_LIMITS, MIME_TYPE_PATTERN, PDF_MIME_TYPE, THUMBNAIL_MIME_TYPES, UPLOAD_KINDS, VIDEO_MIME_TYPES } from '@/constants/media';
 import { ImageProcessor } from '@/infrastructure/ImageProcessor';
 import { MediaSignature } from '@/infrastructure/MediaSignature';
 import { AttachmentModel } from '@/models/attachment';
@@ -32,6 +32,8 @@ const KIND_VALUES: readonly string[] = Object.values(UPLOAD_KINDS);
 const INLINE_MIME_PATTERN = /^(image|video)\//;
 
 const OCTET_STREAM = 'application/octet-stream';
+
+const THUMBNAIL_PROPERTY = 'Thumbnail';
 
 export class MediaServiceImplementation extends BaseServiceImplementation<AttachmentModel> implements MediaService {
 
@@ -124,7 +126,7 @@ export class MediaServiceImplementation extends BaseServiceImplementation<Attach
                 return left(oLoaded.value);
             }
 
-            if (oLoaded.value.Kind !== UPLOAD_KINDS.Video) {
+            if (!this.acceptsThumbnail(oLoaded.value)) {
                 return left(new ValidationError('error.thumbnailNotAllowed'));
             }
 
@@ -190,7 +192,11 @@ export class MediaServiceImplementation extends BaseServiceImplementation<Attach
     }
 
 
-    public deliveryOf(Kind: string, MimeType: string, Download: boolean): MediaDeliveryPlan {
+    public deliveryOf(Kind: string, MimeType: string, Download: boolean, Property: string): MediaDeliveryPlan {
+
+        if (Property === THUMBNAIL_PROPERTY) {
+            return { MimeType, Inline: true };
+        }
 
         const bInline = !Download && Kind !== UPLOAD_KINDS.File && INLINE_MIME_PATTERN.test(MimeType);
 
@@ -411,6 +417,17 @@ export class MediaServiceImplementation extends BaseServiceImplementation<Attach
             this.activeWrites -= 1;
 
         }
+
+    }
+
+
+    private acceptsThumbnail(Upload: AttachmentModel): boolean {
+
+        if (Upload.Kind === UPLOAD_KINDS.Video) {
+            return true;
+        }
+
+        return Upload.Kind === UPLOAD_KINDS.File && Upload.MimeType === PDF_MIME_TYPE;
 
     }
 

@@ -22,7 +22,7 @@ export class MediaRouteImplementation extends BaseRouteImplementation<Attachment
 
         Service.on('CreateUpload', this.createUpload.bind(this));
         Service.before('UPDATE', Service.entities.Uploads, this.beforeUpdate.bind(this));
-        Service.before('READ', Service.entities.Attachments, (Request: Request) => MediaDelivery.requireKind(Request.query));
+        Service.before('READ', Service.entities.Attachments, (Request: Request) => MediaDelivery.requireStreamColumns(Request.query));
         Service.after('READ', Service.entities.Attachments, (Rows: unknown) => this.applyDelivery(Rows));
 
     }
@@ -66,7 +66,8 @@ export class MediaRouteImplementation extends BaseRouteImplementation<Attachment
         MediaDelivery.apply(Rows, (oRow: DeliveredRow, bDownload: boolean) => this.Controller.deliveryOf(
             String(oRow.Kind),
             String(oRow.$mediaContentType ?? ''),
-            bDownload
+            bDownload,
+            String(oRow.$mediaProperty ?? '')
         ));
 
     }

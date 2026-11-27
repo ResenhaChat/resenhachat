@@ -40,6 +40,8 @@ export const AVATAR_MIME_TYPES: readonly string[] = ['image/jpeg', 'image/png', 
 
 export const THUMBNAIL_MIME_TYPES: readonly string[] = ['image/jpeg', 'image/webp'];
 
+export const PDF_MIME_TYPE = 'application/pdf';
+
 export const BLOCKED_FILE_EXTENSIONS: readonly string[] = [
     'exe', 'bat', 'cmd', 'com', 'msi', 'msp', 'scr', 'js', 'mjs', 'vbs', 'vbe', 'wsf', 'ps1', 'sh', 'apk', 'jar', 'dll',
     'hta', 'lnk', 'pif', 'reg', 'cpl', 'msix', 'appx', 'html', 'htm', 'xhtml', 'xml', 'svg', 'svgz'
