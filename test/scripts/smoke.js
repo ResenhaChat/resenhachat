@@ -155,6 +155,26 @@ const find = (aRows, sId) => aRows.find((oRow) => oRow.ID === sId);
     const oSeen = await http('GET', '/service/Chat/People?$select=ID,LastSeenAt', sAna);
     check('LastSeenAt gravado', !!find(oSeen.body.value, DAVI)?.LastSeenAt, oSeen.body);
 
+    const readAs = (sToken, sLocale, sPath) => fetch(`http://${HOST}${sPath}`, {
+        headers: { Authorization: `Bearer ${sToken}`, 'Accept-Language': sLocale }
+    }).then((oResponse) => oResponse.json());
+    const oLocaleGroup = await http('POST', '/service/Chat/CreateConversation', sDavi, { Kind: 'Group', Name: 'Idioma', MemberIds: [ANA] });
+    const sLocaleGroup = oLocaleGroup.body.ID;
+    const sCreatedEn = 'Davi Castro created the group "Idioma"';
+    const sCreatedPt = 'Davi Castro criou o grupo "Idioma"';
+    const oMessagesPath = `/service/Chat/Messages?$filter=Conversation_ID eq ${sLocaleGroup}&$orderby=createdAt`;
+
+    check('aviso do sistema em ingles com Accept-Language en', (await readAs(sDavi, 'en', oMessagesPath)).value[0]?.Text === sCreatedEn);
+    check('aviso do sistema em portugues com pt-BR', (await readAs(sDavi, 'pt-BR', oMessagesPath)).value[0]?.Text === sCreatedPt);
+    check('aviso sem $select de Kind ainda traduz', (await readAs(sDavi, 'en', `/service/Chat/Messages?$filter=Conversation_ID eq ${sLocaleGroup}&$select=ID,Text&$orderby=createdAt`)).value[0]?.Text === sCreatedEn);
+    check('LastMessage do grupo traduzido em ingles', (await readAs(sDavi, 'en', `/service/Chat/Conversations(${sLocaleGroup})`)).LastMessage === sCreatedEn);
+    const oEnMembers = await readAs(sAna, 'en', `/service/Chat/Members?$filter=User_ID eq ${ANA} and Conversation_ID eq ${sLocaleGroup}&$expand=Conversation`);
+    check('Members com $expand=Conversation traz LastMessage em ingles', oEnMembers.value?.[0]?.Conversation?.LastMessage === sCreatedEn, oEnMembers);
+    await http('POST', '/service/Chat/SendMessage', sDavi, { Conversation_ID: sLocaleGroup, Text: 'Oi pessoal' });
+    check('mensagem normal: LastMessage sem traducao', (await readAs(sDavi, 'en', `/service/Chat/Conversations(${sLocaleGroup})`)).LastMessage === 'Oi pessoal');
+    const sMetadata = await fetch(`http://${HOST}/service/Chat/$metadata`).then((oResponse) => oResponse.text());
+    check('chaves de traducao nao expostas no $metadata', !/SystemKey|SystemArgs|LastMessageKey|LastMessageArgs/.test(sMetadata));
+
     const oReg = await http('POST', '/auth/register', null, { Email: 'Maria@Resenha.dev', Password: '123456', DisplayName: 'Maria', Username: 'maria' });
     check('register 201', oReg.status === 201 && oReg.body.User.Username === 'maria' && !!oReg.body.AccessToken, oReg);
     check('register e-mail duplicado 409', (await http('POST', '/auth/register', null, { Email: 'maria@resenha.dev', Password: '123456', DisplayName: 'M', Username: 'maria2' })).status === 409);

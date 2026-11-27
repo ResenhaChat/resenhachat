@@ -137,7 +137,9 @@ service ChatService {
         } excluding {
             Attachment,
             Reactions,
-            Views
+            Views,
+            SystemKey,
+            SystemArgs
         };
 
     action SendMessage(Conversation_ID: UUID, Text: String(4000), ReplyTo_ID: UUID) returns Messages;

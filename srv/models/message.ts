@@ -11,6 +11,8 @@ export type MessageProperties = AuditProperties & {
     IsViewOnce: boolean;
     EditedAt?: string;
     DeletedAt?: string;
+    SystemKey?: string;
+    SystemArgs?: string;
 };
 
 export class MessageModel extends BaseModel {
@@ -33,6 +35,8 @@ export class MessageModel extends BaseModel {
             IsViewOnce: Message.IsViewOnce === true,
             EditedAt: Message.EditedAt ?? undefined,
             DeletedAt: Message.DeletedAt ?? undefined,
+            SystemKey: Message.SystemKey ?? undefined,
+            SystemArgs: Message.SystemArgs ?? undefined,
             ...this.retrieveAudit(Message)
         }));
 
@@ -50,6 +54,10 @@ export class MessageModel extends BaseModel {
 
     public get Text() { return this.properties.Text; }
 
+    public get SystemKey(): string | undefined { return this.properties.SystemKey; }
+
+    public get SystemArgs(): string | undefined { return this.properties.SystemArgs; }
+
     public get CreatedAt() { return this.properties.CreatedAt; }
 
     public toEntityObject(): Message {
@@ -64,6 +72,8 @@ export class MessageModel extends BaseModel {
             IsViewOnce: this.properties.IsViewOnce,
             EditedAt: this.properties.EditedAt,
             DeletedAt: this.properties.DeletedAt,
+            SystemKey: this.properties.SystemKey,
+            SystemArgs: this.properties.SystemArgs,
             ...this.auditEntityObject(this.properties)
         });
 

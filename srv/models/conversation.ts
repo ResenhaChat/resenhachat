@@ -12,6 +12,8 @@ export type ConversationProperties = AuditProperties & {
     DirectKey?: string;
     LastMessageAt?: string;
     LastMessage?: string;
+    LastMessageKey?: string;
+    LastMessageArgs?: string;
 };
 
 export class ConversationModel extends BaseModel {
@@ -34,6 +36,8 @@ export class ConversationModel extends BaseModel {
             DirectKey: Conversation.DirectKey ?? undefined,
             LastMessageAt: Conversation.LastMessageAt ?? undefined,
             LastMessage: Conversation.LastMessage ?? undefined,
+            LastMessageKey: Conversation.LastMessageKey ?? undefined,
+            LastMessageArgs: Conversation.LastMessageArgs ?? undefined,
             ...this.retrieveAudit(Conversation)
         }));
 
@@ -52,6 +56,10 @@ export class ConversationModel extends BaseModel {
     public get OnlyAdminsCanPost() { return this.properties.OnlyAdminsCanPost; }
 
     public get DirectKey() { return this.properties.DirectKey; }
+
+    public get LastMessageKey() { return this.properties.LastMessageKey; }
+
+    public get LastMessageArgs() { return this.properties.LastMessageArgs; }
 
     public get IsDirect() { return this.properties.Kind === 'Direct'; }
 

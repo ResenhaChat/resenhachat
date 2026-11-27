@@ -86,9 +86,14 @@ export class ConversationRepositoryImplementation extends BaseRepositoryImplemen
     }
 
 
-    public async updateLastMessage(Id: string, LastMessageAt: string, LastMessage: string): Promise<void> {
+    public async updateLastMessage(Id: string, LastMessageAt: string, LastMessage: string, LastMessageKey?: string, LastMessageArgs?: string): Promise<void> {
 
-        await cds.run(UPDATE(this.getEntity()).set({ LastMessageAt, LastMessage }).where({ ID: Id }));
+        await cds.run(UPDATE(this.getEntity()).set({
+            LastMessageAt,
+            LastMessage,
+            LastMessageKey: LastMessageKey ?? null,
+            LastMessageArgs: LastMessageArgs ?? null
+        }).where({ ID: Id }));
 
     }
 
@@ -127,7 +132,7 @@ export class ConversationRepositoryImplementation extends BaseRepositoryImplemen
 
     protected columns(): string[] {
 
-        return ['ID', 'Kind', 'Name', 'Description', 'IsPublic', 'OnlyAdminsCanPost', 'DirectKey', 'LastMessageAt', 'LastMessage'];
+        return ['ID', 'Kind', 'Name', 'Description', 'IsPublic', 'OnlyAdminsCanPost', 'DirectKey', 'LastMessageAt', 'LastMessage', 'LastMessageKey', 'LastMessageArgs'];
 
     }
 

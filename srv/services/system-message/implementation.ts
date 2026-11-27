@@ -1,7 +1,8 @@
 import { Request } from '@sap/cds';
 import { MessageArgs } from '@/errors';
-import { LAST_MESSAGE_PREVIEW_LENGTH, SYSTEM_MESSAGE_LOCALE } from '@/constants/conversations';
+import { SYSTEM_MESSAGE_LOCALE } from '@/constants/conversations';
 import { Messages } from '@/infrastructure/Messages';
+import { SystemText } from '@/infrastructure/SystemText';
 import { MessageModel } from '@/models/message';
 import { ConversationRepository } from '@/repositories/conversation';
 import { ConversationMemberRepository } from '@/repositories/conversation-member';
@@ -41,13 +42,20 @@ export class SystemMessageServiceImplementation extends BaseServiceImplementatio
 
         const oNames = await this.namesOf(Events);
         const aMessages = Events.map((oEvent) => this.build(ConversationId, oEvent, oNames));
+        const oLast = aMessages[aMessages.length - 1];
 
         await this.Repository.createMany(aMessages);
 
-        const oSaved = await this.Repository.findById(aMessages[aMessages.length - 1].Id) as MessageModel;
+        const oSaved = await this.Repository.findById(oLast.Id) as MessageModel;
         const sCreatedAt = oSaved.CreatedAt as string;
 
-        await this.Conversations.updateLastMessage(ConversationId, sCreatedAt, this.preview(oSaved.Text ?? ''));
+        await this.Conversations.updateLastMessage(
+            ConversationId,
+            sCreatedAt,
+            SystemText.preview(oSaved.Text ?? ''),
+            oLast.SystemKey,
+            oLast.SystemArgs
+        );
         await this.markActorsRead(ConversationId, Events, sCreatedAt);
 
         const aUserIds = await this.Members.findUserIds(ConversationId);
@@ -84,6 +92,8 @@ export class SystemMessageServiceImplementation extends BaseServiceImplementatio
             ConversationId,
             Kind: 'System',
             Text: Messages.text(Event.Key, SYSTEM_MESSAGE_LOCALE, oArgs),
+            SystemKey: Event.Key,
+            SystemArgs: SystemText.serialize(oArgs),
             IsViewOnce: false
         });
 
@@ -97,13 +107,6 @@ export class SystemMessageServiceImplementation extends BaseServiceImplementatio
         for (const sActorId of aActorIds) {
             await this.Members.markRead(ConversationId, sActorId, ReadAt);
         }
-
-    }
-
-
-    private preview(Text: string): string {
-
-        return Text.replace(/\s+/g, ' ').slice(0, LAST_MESSAGE_PREVIEW_LENGTH);
 
     }
 

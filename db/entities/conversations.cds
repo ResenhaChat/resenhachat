@@ -20,6 +20,8 @@ entity Conversations : cuid, managed {
     DirectKey         : String(80);
     LastMessageAt     : Timestamp;
     LastMessage       : String(200);
+    LastMessageKey    : String(40);
+    LastMessageArgs   : String(1000);
     Members           : Composition of many ConversationMembers
                             on Members.Conversation = $self;
     Messages          : Association to many Messages

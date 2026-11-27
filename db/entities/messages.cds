@@ -17,6 +17,8 @@ entity Messages : cuid, managed {
     IsViewOnce   : Boolean default false;
     EditedAt     : Timestamp;
     DeletedAt    : Timestamp;
+    SystemKey    : String(40);
+    SystemArgs   : String(1000);
     Attachment   : Composition of one MessageAttachments
                        on Attachment.Message = $self;
     Reactions    : Composition of many MessageReactions
