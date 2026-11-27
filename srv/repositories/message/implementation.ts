@@ -13,6 +13,17 @@ export class MessageRepositoryImplementation extends BaseRepositoryImplementatio
     }
 
 
+    public async createMany(Batch: MessageModel[]): Promise<void> {
+
+        if (!Batch.length) {
+            return;
+        }
+
+        await cds.run(INSERT.into(this.getEntity()).entries(Batch.map((oMessage) => oMessage.toEntityObject())));
+
+    }
+
+
     protected entityName(): string {
 
         return 'Messages';

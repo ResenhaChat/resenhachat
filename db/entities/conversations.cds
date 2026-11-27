@@ -8,6 +8,7 @@ using { apps.dflc.resenha.entities.ConversationKind, apps.dflc.resenha.entities.
 using { apps.dflc.resenha.entities.Users } from './users';
 using { apps.dflc.resenha.entities.Messages } from './messages';
 
+@assert.unique: { DirectKey: [DirectKey] }
 entity Conversations : cuid, managed {
     Kind              : ConversationKind default 'Group' @mandatory;
     Name              : String(80);

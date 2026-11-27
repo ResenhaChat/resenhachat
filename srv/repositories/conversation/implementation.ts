@@ -2,6 +2,7 @@ import cds, { Query } from '@sap/cds';
 import { Conversations } from '@models/apps/dflc/resenha/entities';
 import { ConversationModel } from '@/models/conversation';
 import { ServiceLocator } from '@/infrastructure/ServiceLocator';
+import { UniqueViolation } from '@/infrastructure/UniqueViolation';
 import { GENERAL_CONVERSATION_ID, GENERAL_CONVERSATION_NAME } from '@/constants/conversations';
 import { ConversationRepository } from './protocols';
 import { BaseRepositoryImplementation } from '../base/implementation';
@@ -33,7 +34,7 @@ export class ConversationRepositoryImplementation extends BaseRepositoryImplemen
 
         try {
 
-            await cds.run(INSERT.into(this.getEntity()).entries(oGeneral.toEntityObject()));
+            await this.create(oGeneral);
 
         } catch (oError) {
 
@@ -44,6 +45,43 @@ export class ConversationRepositoryImplementation extends BaseRepositoryImplemen
             }
 
         }
+
+    }
+
+
+    public async create(Conversation: ConversationModel): Promise<void> {
+
+        await cds.run(INSERT.into(this.getEntity()).entries(Conversation.toEntityObject()));
+
+    }
+
+
+    public async createDirect(Conversation: ConversationModel): Promise<boolean> {
+
+        try {
+
+            await this.create(Conversation);
+
+            return true;
+
+        } catch (oError) {
+
+            if (UniqueViolation.isError(oError)) {
+                return false;
+            }
+
+            throw oError;
+
+        }
+
+    }
+
+
+    public async findByDirectKey(DirectKey: string): Promise<ConversationModel | null> {
+
+        const oRows = await cds.run(SELECT.from(this.getEntity()).columns(...this.columns()).where({ DirectKey }));
+
+        return this.mapResult(oRows)[0] ?? null;
 
     }
 
@@ -73,7 +111,7 @@ export class ConversationRepositoryImplementation extends BaseRepositoryImplemen
             .where(
                 'cm.User_ID =', UserId,
                 'and m.Conversation_ID in', ConversationIds,
-                'and m.Sender_ID <>', UserId,
+                "and coalesce(m.Sender_ID, '') <>", UserId,
                 'and m.DeletedAt is null and m.createdAt > coalesce(cm.LastReadAt, cm.JoinedAt)'
             )
             .groupBy('m.Conversation_ID');
@@ -89,7 +127,7 @@ export class ConversationRepositoryImplementation extends BaseRepositoryImplemen
 
     protected columns(): string[] {
 
-        return ['ID', 'Kind', 'Name', 'Description', 'OnlyAdminsCanPost', 'LastMessageAt', 'LastMessage'];
+        return ['ID', 'Kind', 'Name', 'Description', 'IsPublic', 'OnlyAdminsCanPost', 'DirectKey', 'LastMessageAt', 'LastMessage'];
 
     }
 

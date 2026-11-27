@@ -1,4 +1,5 @@
 import { ConversationMember, ConversationMembers } from '@models/apps/dflc/resenha/entities';
+import { MEMBER_ROLES } from '@/constants/members';
 import { BaseModel } from './base';
 
 export type ConversationMemberProperties = {
@@ -16,6 +17,10 @@ export class ConversationMemberModel extends BaseModel {
 
     public static with(properties: ConversationMemberProperties): ConversationMemberModel {
         return new ConversationMemberModel(properties);
+    }
+
+    public static joining(Id: string, ConversationId: string, UserId: string, Role: string, JoinedAt: string): ConversationMemberModel {
+        return new ConversationMemberModel({ Id, ConversationId, UserId, Role, JoinedAt });
     }
 
     public static mapModel(Members: ConversationMembers): ConversationMemberModel[] {
@@ -39,7 +44,13 @@ export class ConversationMemberModel extends BaseModel {
 
     public get Role() { return this.properties.Role; }
 
-    public get CanManage() { return this.properties.Role === 'Owner' || this.properties.Role === 'Admin'; }
+    public get JoinedAt() { return this.properties.JoinedAt ?? ''; }
+
+    public get IsOwner() { return this.properties.Role === MEMBER_ROLES.Owner; }
+
+    public get IsAdmin() { return this.properties.Role === MEMBER_ROLES.Admin; }
+
+    public get CanManage() { return this.IsOwner || this.IsAdmin; }
 
     public toEntityObject(): ConversationMember {
 

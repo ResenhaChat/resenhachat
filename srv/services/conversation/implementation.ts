@@ -3,7 +3,6 @@ import { Either, left, right } from '@sweet-monads/either';
 import { Conversation } from '@models/ChatService';
 import { AbstractError, PermissionDenied, ValidationError } from '@/errors';
 import { ConversationMemberRepository } from '@/repositories/conversation-member';
-import { ConversationRepository } from '@/repositories/conversation';
 import { RealtimeHub } from '@/realtime/hub';
 import { ConversationService, MarkAsReadInput } from './protocols';
 import { BaseServiceImplementation } from '../base/implementation';
@@ -11,29 +10,11 @@ import { BaseServiceImplementation } from '../base/implementation';
 export class ConversationServiceImplementation extends BaseServiceImplementation<Conversation> implements ConversationService {
 
     constructor(
-        private readonly Repository: ConversationRepository,
         private readonly Members: ConversationMemberRepository,
         private readonly Hub: RealtimeHub
     ) {
 
         super();
-
-    }
-
-
-    public async applyUnreadCount(UserId: string, Rows: Conversation | Conversation[] | undefined): Promise<void> {
-
-        const aRows = (Array.isArray(Rows) ? Rows : [Rows]).filter((oRow): oRow is Conversation => !!oRow?.ID);
-
-        if (!aRows.length) {
-            return;
-        }
-
-        const oCounts = await this.Repository.countUnread(UserId, aRows.map((oRow) => oRow.ID as string));
-
-        aRows.forEach((oRow) => {
-            oRow.UnreadCount = oCounts.get(oRow.ID as string) ?? 0;
-        });
 
     }
 

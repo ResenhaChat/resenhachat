@@ -6,6 +6,11 @@ import { oConversationRouteFactory } from './conversation';
 import { oMessageRouteFactory } from './message';
 import { oMemberRouteFactory } from './member';
 import { oPushRouteFactory } from './push';
+import { oListingRouteFactory } from './listing';
+import { oDirectRouteFactory } from './direct';
+import { oGroupRouteFactory } from './group';
+import { oMembershipRouteFactory } from './membership';
+import { oRoleRouteFactory } from './role';
 
 const makeMainRoute = (): MainRoute => {
 
@@ -15,7 +20,12 @@ const makeMainRoute = (): MainRoute => {
         oConversationRouteFactory,
         oMessageRouteFactory,
         oMemberRouteFactory,
-        oPushRouteFactory
+        oPushRouteFactory,
+        oListingRouteFactory,
+        oDirectRouteFactory,
+        oGroupRouteFactory,
+        oMembershipRouteFactory,
+        oRoleRouteFactory
     ]);
 
 };

@@ -16,15 +16,7 @@ export class ConversationRouteImplementation extends BaseRouteImplementation<Con
 
     public main(Service: ApplicationService): void {
 
-        Service.after('READ', Service.entities.Conversations, this.afterRead.bind(this));
         Service.on('MarkAsRead', this.markAsRead.bind(this));
-
-    }
-
-
-    private async afterRead(Rows: unknown, Request: Request): Promise<void> {
-
-        await this.Controller.applyUnreadCount(Request.user.id, Rows as Conversation | Conversation[] | undefined);
 
     }
 

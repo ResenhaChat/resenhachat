@@ -31,6 +31,7 @@ type NormalizedSubscription = {
 
 const DIRECT_KIND = 'Direct';
 const TEXT_KIND = 'Text';
+const SYSTEM_KIND = 'System';
 const TEST_TAG = 'resenha-test';
 
 export class PushServiceImplementation extends BaseServiceImplementation<PushSubscription> implements PushService {
@@ -158,7 +159,7 @@ export class PushServiceImplementation extends BaseServiceImplementation<PushSub
 
     public async notifyNewMessage(Message: MessageModel): Promise<void> {
 
-        if (!this.vapidConfigured) {
+        if (!this.vapidConfigured || Message.Kind === SYSTEM_KIND) {
             return;
         }
 
@@ -207,7 +208,7 @@ export class PushServiceImplementation extends BaseServiceImplementation<PushSub
 
     private async newMessagePayload(Message: MessageModel): Promise<PushPayload> {
 
-        const oSender = await this.Users.findById(Message.SenderId);
+        const oSender = await this.Users.findById(Message.SenderId as string);
         const oConversation = await this.Conversations.findById(Message.ConversationId);
         const sSenderName = oSender?.DisplayName ?? '';
         const bDirect = oConversation?.Kind === DIRECT_KIND || !oConversation?.Name;

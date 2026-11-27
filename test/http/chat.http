@@ -98,6 +98,109 @@ Content-Type: application/json
     "Endpoint": "https://push.example.test/fake-endpoint"
 }
 
+### Lista de conversas com titulo, nao lidas e papel (Members, fixadas primeiro)
+GET {{chat}}/Members?$filter=User_ID eq a0000000-0000-4000-8000-000000000001 and IsArchived eq false&$orderby=IsPinned desc,Conversation/LastMessageAt desc&$expand=Conversation
+Authorization: Bearer {{token}}
+
+### Canais publicos (descobrir e entrar)
+GET {{chat}}/PublicChannels
+Authorization: Bearer {{token}}
+
+### Conversa privada com outro usuario (acha ou cria; idempotente)
+POST {{chat}}/StartDirect
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "User_ID": "a0000000-0000-4000-8000-000000000003"
+}
+
+### Criar grupo (Owner = quem chama; membros ignoram IDs invalidos e duplicados)
+POST {{chat}}/CreateConversation
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "Kind": "Group",
+    "Name": "Projeto Novo",
+    "Description": "Grupo de exemplo",
+    "MemberIds": ["a0000000-0000-4000-8000-000000000002"],
+    "IsPublic": false,
+    "OnlyAdminsCanPost": false
+}
+
+### Criar canal publico (IsPublic default true; so Owner/Admin publicam se OnlyAdminsCanPost)
+POST {{chat}}/CreateConversation
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "Kind": "Channel",
+    "Name": "Anuncios",
+    "Description": "Avisos gerais",
+    "MemberIds": [],
+    "OnlyAdminsCanPost": true
+}
+
+### Editar nome e descricao (Owner/Admin; Geral so a descricao pelo Owner)
+PATCH {{chat}}/Conversations(00000000-0000-4000-8000-000000000002)
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "Name": "Projeto X",
+    "Description": "Grupo de teste so com davi e ana"
+}
+
+### Adicionar membros (Owner/Admin, so grupo e canal)
+POST {{chat}}/AddMembers
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "Conversation_ID": "00000000-0000-4000-8000-000000000002",
+    "UserIds": ["a0000000-0000-4000-8000-000000000003"]
+}
+
+### Remover membro (Owner remove qualquer um; Admin remove so Member)
+POST {{chat}}/RemoveMember
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "Conversation_ID": "00000000-0000-4000-8000-000000000002",
+    "User_ID": "a0000000-0000-4000-8000-000000000003"
+}
+
+### Promover ou rebaixar (so Owner): Role Admin ou Member
+POST {{chat}}/SetMemberRole
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "Conversation_ID": "00000000-0000-4000-8000-000000000002",
+    "User_ID": "a0000000-0000-4000-8000-000000000002",
+    "Role": "Admin"
+}
+
+### Sair da conversa (Owner sai: o dono e transferido ao Admin mais antigo, senao ao membro mais antigo)
+POST {{chat}}/LeaveConversation
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "Conversation_ID": "00000000-0000-4000-8000-000000000002"
+}
+
+### Entrar num canal publico (idempotente)
+POST {{chat}}/JoinChannel
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "Conversation_ID": "00000000-0000-4000-8000-000000000005"
+}
+
 ### Enviar push de teste para todas as inscricoes do usuario
 POST {{chat}}/SendPushTest
 Authorization: Bearer {{token}}

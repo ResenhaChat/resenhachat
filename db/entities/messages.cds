@@ -10,7 +10,7 @@ using { apps.dflc.resenha.entities.Conversations } from './conversations';
 
 entity Messages : cuid, managed {
     Conversation : Association to Conversations @mandatory;
-    Sender       : Association to Users @mandatory;
+    Sender       : Association to Users;
     Kind         : MessageKind default 'Text';
     Text         : String(4000);
     ReplyTo      : Association to Messages;

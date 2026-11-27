@@ -4,7 +4,7 @@ import { AuditProperties, BaseModel } from './base';
 export type MessageProperties = AuditProperties & {
     Id: string;
     ConversationId: string;
-    SenderId: string;
+    SenderId?: string;
     Kind: string;
     Text?: string;
     ReplyToId?: string;
@@ -26,7 +26,7 @@ export class MessageModel extends BaseModel {
         return Messages.map((Message: Message) => MessageModel.with({
             Id: Message.ID as string,
             ConversationId: Message.Conversation_ID as string,
-            SenderId: Message.Sender_ID as string,
+            SenderId: Message.Sender_ID ?? undefined,
             Kind: Message.Kind as string,
             Text: Message.Text ?? undefined,
             ReplyToId: Message.ReplyTo_ID ?? undefined,
@@ -42,7 +42,7 @@ export class MessageModel extends BaseModel {
 
     public get ConversationId() { return this.properties.ConversationId; }
 
-    public get SenderId() { return this.properties.SenderId; }
+    public get SenderId(): string | undefined { return this.properties.SenderId; }
 
     public get Kind() { return this.properties.Kind; }
 

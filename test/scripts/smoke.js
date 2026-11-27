@@ -58,7 +58,7 @@ const find = (aRows, sId) => aRows.find((oRow) => oRow.ID === sId);
     check('token invalido = 401', (await http('GET', '/service/Chat/Conversations', 'x')).status === 401);
 
     const oDavi = await http('GET', '/service/Chat/Conversations?$select=ID,Name,UnreadCount&$orderby=Name', sDavi);
-    check('davi ve Geral e Projeto X', oDavi.body.value.length === 2, oDavi.body);
+    check('davi ve Geral, Projeto X, Direct com ana, Avisos e Off-topic', oDavi.body.value.length === 5, oDavi.body);
     check('UnreadCount davi/Geral = 2', find(oDavi.body.value, GERAL)?.UnreadCount === 2, oDavi.body);
 
     const oAna = await http('GET', '/service/Chat/Conversations?$select=ID,UnreadCount', sAna);

@@ -8,4 +8,5 @@ export interface UserRepository extends BaseRepository<UserModel> {
     createWithSettings(User: UserModel): Promise<void>;
     updateLastSeen(UserId: string, LastSeenAt: string): Promise<void>;
     findNotificationsDisabled(UserIds: string[]): Promise<string[]>;
+    findExistingIds(UserIds: string[]): Promise<string[]>;
 }

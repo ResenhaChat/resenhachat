@@ -9,6 +9,5 @@ export type MarkAsReadInput = {
 };
 
 export interface ConversationService extends BaseService<Conversation> {
-    applyUnreadCount(UserId: string, Rows: Conversation | Conversation[] | undefined): Promise<void>;
     markAsRead(UserId: string, Input: MarkAsReadInput, Request: Request): Promise<Either<AbstractError, boolean>>;
 }

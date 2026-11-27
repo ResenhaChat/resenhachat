@@ -57,6 +57,21 @@ export class UserRepositoryImplementation extends BaseRepositoryImplementation<U
     }
 
 
+    public async findExistingIds(UserIds: string[]): Promise<string[]> {
+
+        if (!UserIds.length) {
+            return [];
+        }
+
+        const oRows: { ID: string }[] = await cds.run(
+            SELECT.from(this.getEntity()).columns('ID').where({ ID: { in: UserIds } })
+        );
+
+        return oRows.map((oRow) => oRow.ID);
+
+    }
+
+
     public async updateLastSeen(UserId: string, LastSeenAt: string): Promise<void> {
 
         await cds.run(UPDATE(this.getEntity()).set({ LastSeenAt }).where({ ID: UserId }));

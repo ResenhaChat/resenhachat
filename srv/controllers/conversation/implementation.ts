@@ -14,13 +14,6 @@ export class ConversationControllerImplementation extends BaseControllerImplemen
     }
 
 
-    public async applyUnreadCount(UserId: string, Rows: Conversation | Conversation[] | undefined): Promise<void> {
-
-        await this.Service.applyUnreadCount(UserId, Rows);
-
-    }
-
-
     public async markAsRead(UserId: string, Input: MarkAsReadInput, Request: Request): Promise<BaseControllerResponse> {
 
         return this.respond(await this.Service.markAsRead(UserId, Input, Request), 200);

@@ -1,3 +1,6 @@
-ID;Kind;Name;Description;IsPublic;OnlyAdminsCanPost;LastMessageAt;LastMessage;createdAt;createdBy
-00000000-0000-4000-8000-000000000001;General;Geral;Todo mundo da resenha;true;false;2026-11-25T09:05:00.000Z;Alguém viu o café?;2026-11-20T12:00:00.000Z;system
-00000000-0000-4000-8000-000000000002;Group;Projeto X;Grupo de teste so com davi e ana;false;false;2026-11-25T10:01:00.000Z;Segredo do projeto, joao nao ve;2026-11-24T12:00:00.000Z;system
+ID;Kind;Name;Description;IsPublic;OnlyAdminsCanPost;DirectKey;LastMessageAt;LastMessage;createdAt;createdBy
+00000000-0000-4000-8000-000000000001;General;Geral;Todo mundo da resenha;true;false;;2026-11-25T09:05:00.000Z;Alguém viu o café?;2026-11-20T12:00:00.000Z;system
+00000000-0000-4000-8000-000000000002;Group;Projeto X;Grupo de teste so com davi e ana;false;false;;2026-11-25T10:01:00.000Z;Segredo do projeto, joao nao ve;2026-11-24T12:00:00.000Z;system
+00000000-0000-4000-8000-000000000003;Direct;;;false;false;a0000000-0000-4000-8000-000000000001_a0000000-0000-4000-8000-000000000002;2026-11-25T10:21:00.000Z;Vi sim, está no ar.;2026-11-25T10:00:00.000Z;system
+00000000-0000-4000-8000-000000000004;Channel;Avisos;Comunicados da resenha;true;true;;2026-11-24T13:00:00.000Z;;2026-11-24T13:00:00.000Z;system
+00000000-0000-4000-8000-000000000005;Channel;Off-topic;Papo fora do trabalho;true;false;;2026-11-24T13:10:00.000Z;;2026-11-24T13:10:00.000Z;system

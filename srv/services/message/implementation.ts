@@ -155,7 +155,7 @@ export class MessageServiceImplementation extends BaseServiceImplementation<Mess
 
             this.Hub.publish(aUserIds, {
                 type: 'message.created',
-                payload: { ConversationId: Message.ConversationId, MessageId: Message.Id, SenderId: Message.SenderId }
+                payload: { ConversationId: Message.ConversationId, MessageId: Message.Id, SenderId: Message.SenderId ?? null }
             });
             this.Push.notifyNewMessage(Message);
 
